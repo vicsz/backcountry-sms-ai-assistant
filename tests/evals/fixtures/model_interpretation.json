@@ -1,0 +1,124 @@
+[
+  {
+    "id": "current-location-toronto",
+    "description": "Current whereabouts supplies the weather location",
+    "history": [
+      {"input": "Weather at Pine Ridge", "output": "Pine Ridge will be mild."}
+    ],
+    "current_sms": "I'm in Toronto now, what's the weather?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "Toronto",
+      "current_location_text": "Toronto",
+      "coordinates": null,
+      "time_window": "now",
+      "activity": "general",
+      "location_source": "current"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"Toronto\",\"current_location_text\":\"Toronto\",\"coordinates\":null,\"time_window\":\"now\",\"activity\":\"general\",\"location_source\":\"current\"}"
+  },
+  {
+    "id": "follow-up-newest-location",
+    "description": "Location-free follow-up inherits the newest permitted location",
+    "history": [
+      {"input": "Weather at Toronto", "output": "Toronto will be mild."}
+    ],
+    "current_sms": "What about tomorrow?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "Toronto",
+      "current_location_text": "",
+      "coordinates": null,
+      "time_window": "tomorrow",
+      "activity": "general",
+      "location_source": "history"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"Toronto\",\"current_location_text\":\"\",\"coordinates\":null,\"time_window\":\"tomorrow\",\"activity\":\"general\",\"location_source\":\"history\"}"
+  },
+  {
+    "id": "current-gps-preserved",
+    "description": "Coordinates explicitly supplied by the current SMS remain exact",
+    "history": [],
+    "current_sms": "Weather at 45.62 N, 78.42 W tonight",
+    "expected": {
+      "intent": "weather",
+      "location_text": "",
+      "current_location_text": "",
+      "coordinates": {"latitude": 45.62, "longitude": -78.42},
+      "time_window": "tonight",
+      "activity": "general",
+      "location_source": "current"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":null,\"current_location_text\":\"\",\"coordinates\":{\"latitude\":45.62,\"longitude\":-78.42},\"time_window\":\"tonight\",\"activity\":\"general\",\"location_source\":\"current\"}"
+  },
+  {
+    "id": "current-nyc-location",
+    "description": "A common abbreviated city name is extracted as the current location",
+    "history": [],
+    "current_sms": "I'm in NYC now, will it rain?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "NYC",
+      "current_location_text": "NYC",
+      "coordinates": null,
+      "time_window": "now",
+      "activity": "general",
+      "location_source": "current"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"NYC\",\"current_location_text\":\"NYC\",\"coordinates\":null,\"time_window\":\"today\",\"activity\":\"general\",\"location_source\":\"current\"}"
+  },
+  {
+    "id": "current-location-toronto-forecast",
+    "description": "Whereabouts wording with a forecast request remains current-sourced",
+    "history": [
+      {"input": "Weather at Algonquin Park", "output": "Algonquin Park conditions noted."}
+    ],
+    "current_sms": "I am in Toronto - what is the forecast?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "Toronto",
+      "current_location_text": "Toronto",
+      "coordinates": null,
+      "time_window": "today",
+      "activity": "general",
+      "location_source": "current"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"Toronto\",\"current_location_text\":\"Toronto\",\"coordinates\":null,\"time_window\":\"today\",\"activity\":\"general\",\"location_source\":\"current\"}"
+  },
+  {
+    "id": "current-location-nyc-tonight",
+    "description": "Abbreviated current city with an explicit tonight window",
+    "history": [
+      {"input": "Weather at Toronto", "output": "Toronto conditions noted."}
+    ],
+    "current_sms": "I am in NYC, will it rain tonight?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "NYC",
+      "current_location_text": "NYC",
+      "coordinates": null,
+      "time_window": "tonight",
+      "activity": "general",
+      "location_source": "current"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"NYC\",\"current_location_text\":\"NYC\",\"coordinates\":null,\"time_window\":\"tonight\",\"activity\":\"general\",\"location_source\":\"current\"}"
+  },
+  {
+    "id": "current-location-burnt-island",
+    "description": "Current outdoor point of interest overrides a historical city",
+    "history": [
+      {"input": "Weather at Toronto", "output": "Toronto conditions noted."}
+    ],
+    "current_sms": "I am at Burnt Island Lake, what are conditions tomorrow?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "Burnt Island Lake",
+      "current_location_text": "Burnt Island Lake",
+      "coordinates": null,
+      "time_window": "tomorrow",
+      "activity": "general",
+      "location_source": "current"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"Burnt Island Lake\",\"current_location_text\":\"Burnt Island Lake\",\"coordinates\":null,\"time_window\":\"tomorrow\",\"activity\":\"general\",\"location_source\":\"current\"}"
+  }
+]

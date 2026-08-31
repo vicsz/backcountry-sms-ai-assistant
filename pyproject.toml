@@ -1,0 +1,21 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "integration: opt-in live provider and Bedrock contract checks",
+    "eval_model: model interpretation and response evaluations",
+    "eval_location: named-place provider evaluations",
+]
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["backcountry_sms"]
+check_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true

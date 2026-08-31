@@ -1,0 +1,11 @@
+{
+  "metadataAttributes": {
+    "source_label": "Ontario Parks guide",
+    "source_url": "https://www.ontarioparks.ca/park-locator",
+    "corpus_snapshot": "2026-08-31",
+    "corpus_sha256": "19273cf0e1711aeb40b049df45ecbad49c2e01f24733e565a5614c0befb83e74",
+    "region": "ca-central-1",
+    "embedding_model": "amazon.titan-embed-text-v2:0",
+    "chunking": "fixed-size:300-tokens:30-token-overlap"
+  }
+}

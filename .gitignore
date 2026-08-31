@@ -1,0 +1,27 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.DS_Store
+cdk.out/
+cdk.context.json
+node_modules/
+build/
+dist/
+*.egg-info/
+*.pyc
+.env
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+*.p12
+# Local evaluation reports, brainstorming, drafts, and other private working material.
+local/
+.jsii-cache/

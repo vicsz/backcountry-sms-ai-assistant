@@ -1,0 +1,56 @@
+[
+  {
+    "id": "burnt-island-lake",
+    "query": "Burnt Island Lake, Algonquin",
+    "expected_outcome": "resolved",
+    "acceptable_names": ["Burnt Island Lake"],
+    "latitude": 45.6,
+    "longitude": -78.8,
+    "tolerance": 0.5
+  },
+  {
+    "id": "portage-store",
+    "query": "Portage Store",
+    "expected_outcome": "resolved",
+    "acceptable_names": ["Portage Store", "Canoe Lake Access Point (The Portage Store)"],
+    "latitude": 45.5,
+    "longitude": -78.7,
+    "tolerance": 0.5
+  },
+  {
+    "id": "toronto",
+    "query": "Toronto",
+    "expected_outcome": "resolved",
+    "acceptable_names": ["Toronto"],
+    "latitude": 43.7,
+    "longitude": -79.4,
+    "tolerance": 0.5
+  },
+  {
+    "id": "nyc",
+    "query": "NYC",
+    "expected_outcome": "resolved",
+    "acceptable_names": ["New York City", "New York", "New York (NYC), NY, United States"],
+    "latitude": 40.7,
+    "longitude": -74.0,
+    "tolerance": 0.5
+  },
+  {
+    "id": "ambiguous-springfield",
+    "query": "Springfield",
+    "expected_outcome": "ambiguous",
+    "acceptable_names": [],
+    "latitude": null,
+    "longitude": null,
+    "tolerance": null
+  },
+  {
+    "id": "nonexistent-place",
+    "query": "This Place Does Not Exist 998877",
+    "expected_outcome": "not_found",
+    "acceptable_names": [],
+    "latitude": null,
+    "longitude": null,
+    "tolerance": null
+  }
+]

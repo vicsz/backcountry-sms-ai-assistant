@@ -1,0 +1,11 @@
+{
+  "Records": [
+    {
+      "Sns": {
+        "MessageId": "stage-8-1-toronto-001",
+        "Timestamp": "2026-08-31T12:00:00Z",
+        "Message": "{\"originationNumber\":\"__TEST_SENDER__\",\"destinationNumber\":\"__TEST_BOT__\",\"messageBody\":\"What's the weather in Toronto?\",\"messageId\":\"stage-8-1-toronto-001\"}"
+      }
+    }
+  ]
+}
