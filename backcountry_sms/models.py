@@ -32,6 +32,7 @@ WEATHER_LOCATION_UNAVAILABLE = "Location lookup is unavailable right now. Please
 WEATHER_EXTRACTION_FALLBACK = "I couldn't understand that weather request. Please include GPS coordinates or a named place."
 WEATHER_PROVIDER_FALLBACK = "Weather data is unavailable right now. Please try again shortly."
 WEATHER_ADVICE_FALLBACK = "Weather is available, but advice is unavailable. Please use caution."
+CURRENT_DATA_LIMITATION_REPLY = "I don't have real-time news or stats. I can provide weather, fire status, and Ontario Parks guide information."
 FALLBACK_REPLY = FAILURE_MESSAGES["unknown"]
 
 COORDINATE_NUMBER = r"[+-]?\d{1,3}(?:\.\d+)?"

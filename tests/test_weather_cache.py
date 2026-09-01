@@ -33,6 +33,16 @@ def test_successful_weather_is_cached(monkeypatch) -> None:
     assert len(calls) == 1
 
 
+def test_bug_0002_open_water_guidance_prioritizes_crossing_factors() -> None:
+    guidance = weather.trip_guidance(
+        {"temperature_c": 20, "precipitation_probability": 45, "precipitation_mm": 1.2, "wind_kmh": 12, "gust_kmh": 20},
+        "open-water crossing",
+    )
+
+    assert guidance[0] == "Watch wind, rain, and visibility; stay near shore if conditions worsen."
+    assert "tarp" not in guidance[0].lower()
+
+
 def test_expired_weather_is_refetched(monkeypatch) -> None:
     calls = []
     now = iter([100.0, 101.0, 200.0, 201.0])

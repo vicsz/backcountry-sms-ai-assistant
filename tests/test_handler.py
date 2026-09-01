@@ -299,6 +299,69 @@ def test_current_status_questions_redirect_without_model_or_retrieval(monkeypatc
     assert "check Ontario Parks directly" in handler._reply_for_message(question)
 
 
+def test_enh_0001_current_news_explains_data_boundary_without_model_or_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("model called")))
+    monkeypatch.setattr(handler.retrieval, "configured_retriever", lambda: (_ for _ in ()).throw(AssertionError("retrieval called")))
+
+    response = handler._reply_for_message("What happened in Ontario today?")
+
+    assert response == handler.CURRENT_DATA_LIMITATION_REPLY
+    assert len(response) <= 160
+
+
+def test_bug_0002_weather_dependent_crossing_bypasses_rag_after_misclassification(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(handler, "_extract_weather_context", lambda *_args: {
+        "intent": "information_lookup", "location_text": "Burnt Island Lake", "current_location_text": "",
+        "coordinates": None, "time_window": "tomorrow", "activity": "general", "location_source": "history",
+    })
+    monkeypatch.setattr(handler.retrieval, "configured_retriever", lambda: (_ for _ in ()).throw(AssertionError("retrieval called")))
+    monkeypatch.setattr(handler, "_weather_request_reply", lambda *_args: "weather path")
+
+    assert handler._reply_for_message("We're planning a long crossing tomorrow morning. What should we watch for?") == "weather path"
+
+
+def test_bug_0002_weather_activity_recovers_history_location_when_model_omits_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(handler, "_extract_weather_context", lambda *_args: {
+        "intent": "information_lookup", "location_text": "", "current_location_text": "",
+        "coordinates": None, "time_window": "today", "activity": "general", "location_source": "none",
+    })
+    captured: list[dict[str, object]] = []
+
+    def weather_path(_text: str, _coordinates: tuple[float, float] | None, _history: object, _readable: bool, context: dict[str, object]) -> str:
+        captured.append(context)
+        return "weather path"
+
+    monkeypatch.setattr(handler, "_weather_request_reply", weather_path)
+    history = [handler.ContextInteraction("We are at Burnt Island Lake today.", "Weather noted.", "prior")]
+
+    assert handler._reply_for_message("We're planning a long crossing tomorrow morning. What should we watch for?", history) == "weather path"
+    assert captured[0]["location_text"] == "Burnt Island Lake"
+    assert captured[0]["location_source"] == "history"
+    assert captured[0]["time_window"] == "tomorrow morning"
+    assert captured[0]["activity"] == "open-water crossing"
+
+
+def test_bug_0002_weather_activity_recovers_history_when_extraction_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(handler, "_extract_weather_context", lambda *_args: None)
+    captured: list[dict[str, object]] = []
+
+    def weather_path(_text: str, _coordinates: tuple[float, float] | None, _history: object, _readable: bool, context: dict[str, object]) -> str:
+        captured.append(context)
+        return "weather path"
+
+    monkeypatch.setattr(handler, "_weather_request_reply", weather_path)
+    history = [handler.ContextInteraction("We are at Burnt Island Lake today.", "Weather noted.", "prior")]
+
+    assert handler._reply_for_message("We're planning a long crossing tomorrow morning. What should we watch for?", history) == "weather path"
+    assert captured[0]["location_text"] == "Burnt Island Lake"
+    assert captured[0]["time_window"] == "tomorrow morning"
+
+
+def test_bug_0002_rejects_absolute_safety_advice() -> None:
+    assert handler._contains_absolute_safety_claim("Safe for paddling.")
+    assert not handler._contains_absolute_safety_claim("Weather looks favorable; monitor conditions.")
+
+
 def test_mixed_weather_and_current_site_status_redirects_before_rag(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("model called")))
     monkeypatch.setattr(handler.retrieval, "configured_retriever", lambda: (_ for _ in ()).throw(AssertionError("retrieval called")))

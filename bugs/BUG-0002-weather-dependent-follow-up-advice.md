@@ -15,6 +15,10 @@ tomorrow, the assistant rejected these follow-ups:
 The assistant asked for GPS coordinates or a named place even though the recent conversation already
 contained the grounded location.
 
+The later deployed-demo check also exposed two related failures in this same behavior contract:
+`We're planning a long crossing tomorrow morning. What should we watch for?` was routed to the
+Ontario Parks guide instead of weather, and the preceding weather response said `Safe for paddling`.
+
 ## Expected behavior
 
 When recent conversation history contains a grounded location, a follow-up outdoor decision question
@@ -70,6 +74,10 @@ Implemented locally:
 - canonicalized qualified and deictic history labels, corrected grounded history locations mislabeled
   as current, and discarded model coordinates not repeated in the current SMS;
 - added `noon`, `midday`, and `mid day` hourly selection at 12:00.
+- added deterministic routing for weather-dependent activity planning when the model classifies the
+  question as guide information;
+- rejected generated absolute safety claims such as `safe`, `safely`, `guaranteed`, and `no risk`
+  in favor of the deterministic, conditional weather summary.
 
 No activity-specific answer or location was hardcoded.
 
@@ -89,23 +97,30 @@ No activity-specific answer or location was hardcoded.
   of the requested midday forecast period.
 - Model-eval cases `BUG-0002-CROSSING-001` and `BUG-0002-TARP-001` will cover history-grounded
   weather-dependent follow-ups when the Bedrock-live evaluation suite is run.
+- `tests/test_handler.py::test_bug_0002_weather_dependent_crossing_bypasses_rag_after_misclassification`
+  protects deterministic routing for planning questions.
+- `tests/test_handler.py::test_bug_0002_rejects_absolute_safety_advice` protects bounded safety
+  language.
 
 ## Validation results
 
-- Focused BUG-0002 tests: 5 passed; midday-selection test passed.
+- Focused BUG-0002 tests and guidance coverage: 10 passed.
 - Ruff: passed.
-- Full unit suite: 173 passed, 19 skipped.
+- Full unit suite: 179 passed, 19 skipped.
 - CDK synthesis: passed with the repository virtualenv app command.
-- Demo live verification: passed on the dedicated capture stack. The isolated location-then-tarp
-  sequence and the crossing path returned captured responses and confirmed
-  `sms_api_called=false` and `sns_published=false`.
+- Demo live verification: passed on the redeployed dedicated capture stack. The synthetic crossing
+  sequence reached the weather path and returned conditional wind/rain/visibility guidance without
+  an absolute safety claim; `sms_api_called=false` and `sns_published=false`.
 
 ## Deployment/live-verification status
 
 The defect involved Bedrock interpretation, weather-provider lookup, and deployed demo behavior. The
 corrected implementation was deployed to the demo capture stack defined in `docs/environments.md`.
-The isolated location-then-tarp sequence and crossing follow-up were live-verified with synthetic
-inputs; no SMS or SNS delivery occurred. No production environment is deployed.
+The synthetic location-and-crossing sequence was live-verified after redeployment; no SMS or SNS
+delivery occurred. No production environment is deployed.
+
+The earlier implementation passed an isolated demo check, but the later deployed-demo check exposed
+the routing and advice gaps. The corrected implementation now passes the automated and demo checks.
 
 The bug is closed because automated validation and demo-environment live verification are complete.
 

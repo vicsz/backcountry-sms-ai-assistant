@@ -1,12 +1,17 @@
 # Bug-fixing workflow
 
-This workflow applies when a request reports existing behavior as broken, failing, incorrect, or
-regressed, or asks to fix a behavior. It complements the spec-first development workflow: a spec
-describes intended new behavior, while a bug record preserves how existing behavior deviated from
-that expectation.
+This workflow is the defect-specific branch of
+[`behavior-change-workflow.md`](behavior-change-workflow.md). It applies when a request reports
+existing behavior as broken, failing, incorrect, or regressed, or asks to fix a behavior. It
+complements the normal spec and enhancement workflow: a bug record preserves how existing behavior
+deviated from an expectation, while an enhancement or spec defines a new capability or contract.
 
 The project-local `.codex/skills/bug-fixing-workflow/SKILL.md` helps route matching requests into
 this workflow automatically. The repository instructions and this document remain authoritative.
+
+If initial analysis shows that the behavior was never promised or implemented, stop treating it as
+a defect and route it as an enhancement or spec gap through the shared workflow. Keep the original
+finding and the classification decision visible in the work record.
 
 Use the environment definitions in [`docs/environments.md`](docs/environments.md). “Live
 verification” means a check against the deployed target relevant to this project; it does not

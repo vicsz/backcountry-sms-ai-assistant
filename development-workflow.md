@@ -1,6 +1,6 @@
 # Development workflow
 
-This document defines how to implement one repository spec at a time. It is a process contract,
+This document defines how to implement one repository behavior change at a time. It is a process contract,
 not an executable script and does not authorize deployment, live provider calls, SMS sends, or
 commits by itself. It also defines a cost-aware default: use the smallest capable model, keep
 context bounded, avoid duplicate agent work, and reserve expensive checks for the final gate.
@@ -8,8 +8,9 @@ context bounded, avoid duplicate agent work, and reserve expensive checks for th
 ## Choose the work type
 
 This workflow defines the common engineering lifecycle: bounded scope, review, validation,
-live-check, and commit controls. New behavior starts from one bounded spec. Existing broken,
-failing, or regressed behavior starts from
+live-check, and commit controls. Classify exploratory results and route them through
+[`behavior-change-workflow.md`](behavior-change-workflow.md). New behavior starts from one bounded
+spec or enhancement. Existing broken, failing, or regressed behavior starts from
 [`bug-fixing-workflow.md`](bug-fixing-workflow.md), which requires a tracked bug record and an
 automated regression test before commit.
 
@@ -19,9 +20,9 @@ configuration or future spec is not a production deployment. “Live verificatio
 verification against the deployed target for the change, which is currently the demo capture
 stack.
 
-This separation is intentional for both maintainability and demonstration: specs show how planned
-capability is delivered, while bug records show evidence-led diagnosis, corrective change, and
-proof that a known failure does not return. The project-local
+This separation is intentional for both maintainability and demonstration: specs and enhancement
+records show how planned capability is delivered, while bug records show evidence-led diagnosis,
+corrective change, and proof that a known failure does not return. The project-local
 `.codex/skills/bug-fixing-workflow/SKILL.md` provides automatic routing guidance; it does not replace
 these repository rules or authorize side effects.
 
@@ -30,18 +31,21 @@ these repository rules or authorize side effects.
 Commit messages must begin with the tracked work identifier:
 
 - Bug work: `BUG-#### -- concise fix description`.
+- Enhancement work: `ENH-#### -- concise capability description`.
 - Spec work: `SPEC-<stage> -- concise implementation description`.
 - Documentation or maintenance work without a bug or spec uses the repository's normal concise
   prefix.
 
-Use the identifier from the bug record or selected spec, not a newly invented number. A commit may
-reference more than one identifier only when the records explicitly share one bounded change.
+Use the identifier from the bug record, enhancement record, or selected spec, not a newly invented
+number. A commit may reference more than one identifier only when the records explicitly share one
+bounded change.
 
-## Start with one spec
+## Start with one bounded work item
 
-Select one spec path and keep the work bounded to its scope, acceptance criteria, and explicit
-non-goals. Do not implement multiple stages in one change. Before coding, identify whether the
-change is documentation-only, offline-test-only, infrastructure-only, or runtime behavior.
+Select one bug record, enhancement, or spec path and keep the work bounded to its scope, acceptance
+criteria, and explicit non-goals. Do not implement multiple stages in one change. Before coding,
+identify whether the change is documentation-only, offline-test-only, infrastructure-only, or
+runtime behavior.
 
 Use a prompt in this form:
 

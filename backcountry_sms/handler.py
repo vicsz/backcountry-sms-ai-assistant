@@ -29,6 +29,7 @@ from .bedrock import (
     WEATHER_UNAVAILABLE_SYSTEM_PROMPT,
 )
 from .models import (
+    CURRENT_DATA_LIMITATION_REPLY,
     DEFAULT_MODEL_ID,  # noqa: F401 - compatibility export
     FAILURE_MESSAGES,
     FALLBACK_REPLY,
@@ -178,18 +179,47 @@ def _log_captured_response(test_run_id: str, response_text: str) -> None:
 
 def _reply_for_message(user_text: object, history: Sequence[ContextInteraction] = (), context_readable: bool = True) -> str:
     text = user_text if isinstance(user_text, str) else ""
+    activity_question = _contains_weather_dependent_activity(text)
     redirect = _current_status_redirect(text)
     if redirect is not None:
         return redirect
+    if _is_current_news_question(text):
+        LOGGER.info("current_news_unavailable")
+        return CURRENT_DATA_LIMITATION_REPLY
     context = _extract_weather_context(text, history)
     if context is None:
-        LOGGER.info("message_interpretation_failed")
-        return _interpretation_fallback()
+        if activity_question:
+            history_location = _newest_history_location(history)
+            if history_location:
+                context = {
+                    "intent": "weather",
+                    "location_text": history_location,
+                    "current_location_text": "",
+                    "coordinates": None,
+                    "time_window": _activity_time_window(text, "today"),
+                    "activity": _activity_name(text, "general"),
+                    "location_source": "history",
+                }
+        if context is None:
+            LOGGER.info("message_interpretation_failed")
+            return _interpretation_fallback()
     intent = context["intent"]
     # The model can classify a live question as guide information. These
     # deterministic lexical boundaries keep weather and fire questions off RAG.
-    if _contains_weather_term(text):
+    if _contains_weather_term(text) or activity_question:
         intent = "weather"
+        if activity_question and not context.get("location_text"):
+            history_location = _newest_history_location(history)
+            if history_location:
+                context = {
+                    **context,
+                    "location_text": history_location,
+                    "current_location_text": "",
+                    "coordinates": None,
+                    "time_window": _activity_time_window(text, str(context.get("time_window") or "today")),
+                    "activity": _activity_name(text, str(context.get("activity") or "general")),
+                    "location_source": "history",
+                }
     elif _contains_fire_term(text):
         intent = "fire_status"
     if intent == "fire_status":
@@ -283,8 +313,8 @@ def _weather_reply(user_text: str, coordinates: tuple[float, float], location_so
     except Exception as error:  # noqa: BLE001
         LOGGER.info("weather_advice_failed error_type=%s", type(error).__name__)
         advice = _deterministic_weather_summary(selected, guidance)
-    if _contains_stale_historical_location(advice, history, verified_location_label):
-        LOGGER.info("weather_advice_stale_location_rejected")
+    if _contains_stale_historical_location(advice, history, verified_location_label) or _contains_absolute_safety_claim(advice):
+        LOGGER.info("weather_advice_rejected")
         advice = _deterministic_weather_summary(selected, guidance)
     if fire_result is not None:
         # Reserve the deterministic fire segment before bounding weather prose so the
@@ -492,6 +522,46 @@ def _current_status_redirect(user_text: str) -> str | None:
 
 def _contains_weather_term(user_text: str) -> bool:
     return bool(re.search(r"\b(weather|forecast|temperature|rain|wind|snow|sunny|cold|warm)\b", user_text, re.IGNORECASE))
+
+
+def _is_current_news_question(user_text: str) -> bool:
+    lowered = user_text.casefold()
+    return bool(
+        re.search(r"\b(news|headlines?|current events?|breaking news|statistics?|stats)\b", lowered)
+        or re.search(r"\bwhat happened\b[^?!.]{0,50}\b(?:today|now|latest)\b", lowered)
+        or re.search(r"\b(?:latest|current)\b[^?!.]{0,35}\b(?:news|events?|stats|statistics?)\b", lowered)
+    )
+
+
+def _contains_weather_dependent_activity(user_text: str) -> bool:
+    lowered = user_text.casefold()
+    activity = r"\b(?:cross(?:ing)?|paddl(?:e|ing)|canoe|kayak|tarp|shelter|camp(?:ing)?|sleep(?:ing)?|hike|hiking)\b"
+    decision = r"\b(?:can i|should i|planning|plan to|what should|watch for|conditions?|suitable|okay to|ok to)\b"
+    return bool(re.search(activity, lowered) and re.search(decision, lowered))
+
+
+def _activity_time_window(user_text: str, fallback: str) -> str:
+    lowered = user_text.casefold()
+    if re.search(r"\btomorrow\s+morning\b", lowered):
+        return "tomorrow morning"
+    if re.search(r"\btonight\b", lowered):
+        return "tonight"
+    if re.search(r"\bovernight|before bed\b", lowered):
+        return "overnight"
+    if re.search(r"\bnoon|midday|mid day\b", lowered):
+        return "noon"
+    return fallback
+
+
+def _activity_name(user_text: str, fallback: str) -> str:
+    lowered = user_text.casefold()
+    if re.search(r"\bcross(?:ing)?\b", lowered):
+        return "open-water crossing"
+    if re.search(r"\b(?:tarp|shelter|camp(?:ing)?|sleep(?:ing)?)\b", lowered):
+        return "camping"
+    if re.search(r"\b(?:paddl(?:e|ing)|canoe|kayak)\b", lowered):
+        return "paddling"
+    return fallback
 
 
 def _contains_fire_term(user_text: str) -> bool:
@@ -752,6 +822,11 @@ def _contains_stale_historical_location(advice: str, history: Sequence[ContextIn
             if name.casefold() != verified and name.casefold() in advice.casefold():
                 return True
     return False
+
+
+def _contains_absolute_safety_claim(advice: str) -> bool:
+    """Reject model wording that turns a weather snapshot into a safety guarantee."""
+    return bool(re.search(r"\b(?:safe|safely|guarantee(?:d)?|no risk)\b", advice, re.IGNORECASE))
 
 
 def _historical_location_labels(user_text: str) -> set[str]:

@@ -38,16 +38,25 @@ publication planning.
 - Preserve authoritative deterministic data boundaries. Do not allow an LLM to invent current
   weather, fire-ban status, closures, coordinates, provider results, or other operational facts.
 - Keep SMS length, bounded context, retry limits, privacy, and safe fallback behavior explicit.
+  Replies must fit one SMS segment (160 GSM-7 septets); weather advice should target 140 characters
+  when deterministic fire-status text may also need to be included.
 
 ## Development workflow
 
-Follow [`development-workflow.md`](development-workflow.md) for implementation, review,
+Follow [`behavior-change-workflow.md`](behavior-change-workflow.md) to classify behavior findings,
+then follow [`development-workflow.md`](development-workflow.md) for implementation, review,
 validation, live checks, and commit sequencing.
 
 - Bug, regression, broken-behavior, or failing-behavior work must follow
   [`bug-fixing-workflow.md`](bug-fixing-workflow.md), create or update a record under `bugs/`, and
   add automated regression coverage before commit. Its commit message must begin with the bug ID,
   for example `BUG-0001 -- fix Collingwood weather interpretation`.
+- Enhancements must have bounded acceptance criteria and automated acceptance/capability coverage
+  when feasible. Use an `ENH-####` identifier when the work is tracked independently; its commit
+  message must begin with that identifier.
+- If a requested behavior is new or ambiguous rather than broken, classify it as an enhancement or
+  spec gap before implementation. Exploratory sanity-test results are capability findings until
+  they are classified.
 - Spec implementation commits must begin with the selected spec identifier, for example
   `SPEC-4.1 -- improve location extraction`.
 - The project-local [`bug-fixing-workflow` skill](.codex/skills/bug-fixing-workflow/SKILL.md) may

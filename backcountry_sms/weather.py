@@ -122,20 +122,29 @@ def select_weather_period(periods: list[dict[str, object]], time_window: str) ->
 
 def trip_guidance(weather: Mapping[str, object], activity: str) -> list[str]:
     guidance: list[str] = []
+    activity_lower = activity.lower()
+    open_water = any(term in activity_lower for term in ("cano", "paddl", "kayak", "cross"))
+    camping = any(term in activity_lower for term in ("camp", "tarp", "shelter", "sleep"))
     gust, wind = float(cast(Any, weather["gust_kmh"])), float(cast(Any, weather["wind_kmh"]))
     rain_probability, precipitation = float(cast(Any, weather["precipitation_probability"])), float(cast(Any, weather["precipitation_mm"]))
     temperature = float(cast(Any, weather["temperature_c"]))
-    if gust >= 40:
-        guidance.append("Avoid open-water canoeing; gusts are high.")
-    elif gust >= 30 or wind >= 25:
-        guidance.append("Canoe early or stay near shore; wind may build.")
-    if rain_probability >= 60 or precipitation >= 1:
+    if open_water and gust >= 40:
+        guidance.append(
+            "Avoid open-water canoeing; gusts are high."
+            if "cano" in activity_lower
+            else "Avoid exposed open-water crossings; gusts are high."
+        )
+    elif open_water and (gust >= 30 or wind >= 25):
+        guidance.append("Stay near shore; wind may build on open water.")
+    elif open_water:
+        guidance.append("Watch wind, rain, and visibility; stay near shore if conditions worsen.")
+    if camping and (rain_probability >= 60 or precipitation >= 1):
         guidance.append("Set the tarp before rain.")
     if temperature <= 5:
         guidance.append("Plan warm, dry layers for cold conditions.")
     if not guidance:
         guidance.append("No major weather trigger in this forecast hour; keep normal caution.")
-    if "cano" in activity.lower() and gust >= 30:
+    if open_water and gust >= 30:
         guidance.append("Avoid exposed crossings if conditions worsen.")
     return guidance
 

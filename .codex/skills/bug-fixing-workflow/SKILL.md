@@ -6,8 +6,10 @@ description: Track and resolve reported software bugs, regressions, broken behav
 # Bug-fixing workflow
 
 Use this skill when the user reports existing behavior as broken, failing, incorrect, or regressed,
-or asks to fix a behavior. Do not use it for ordinary feature work unless the user identifies a
-defect in existing behavior.
+or asks to fix a behavior. It is the defect-specific route within the repository’s shared
+behavior-change workflow. Do not use it for ordinary feature work unless the user identifies a
+defect in existing behavior; route new or ambiguous capabilities through the repository’s normal
+spec/enhancement process.
 
 ## Required intake
 
@@ -54,3 +56,7 @@ assume that “live” means production or that a configured production target i
 tests should include the bug ID in the test name or a `Regression: BUG-####` docstring/comment, and
 the bug record should list exact `path::test_name` references. Broader model/provider eval cases
 should use a related bug-linked case ID and remain distinct from deterministic unit tests.
+
+If investigation shows that the requested behavior is new rather than broken, preserve the
+finding, explain the classification, and hand it back to the shared behavior-change workflow as
+an enhancement or spec gap instead of forcing it into a bug record.
