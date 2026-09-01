@@ -784,6 +784,20 @@ def test_abbreviated_us_city_matches_provider_name() -> None:
     assert resolution.outcome == "resolved"
 
 
+def test_unqualified_common_place_prefers_ontario_candidate() -> None:
+    ontario = handler.LocationCandidate(
+        "Collingwood", 44.50, -80.22, "CITY", "Collingwood, Ontario, Canada", "amazon_location_places", score=80
+    )
+    pennsylvania = handler.LocationCandidate(
+        "Collingwood", 40.12, -75.01, "CITY", "Pennsylvania, USA", "amazon_location_places", score=100
+    )
+
+    resolution = handler._rank_location_candidates("Collingwood", [pennsylvania, ontario])
+
+    assert resolution.outcome == "resolved"
+    assert resolution.candidate == ontario
+
+
 def test_missing_location_calls_interpreter_but_not_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -823,6 +837,36 @@ def test_natural_toronto_location_comes_from_interpreter_not_phrase_rules(
     assert len(bedrock.calls) == 2
     assert "at|in|near" not in handler.EXTRACTION_SYSTEM_PROMPT
     assert "Toronto conditions" in sms.calls[0]["MessageBody"]
+
+
+def test_collingwood_named_location_reaches_provider_backed_weather_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bedrock = FakeBedrockClient(
+        responses=[
+            model_response('{"intent":"weather","location_text":"Collingwood","current_location_text":"Collingwood","coordinates":null,"time_window":"tonight","activity":"general","location_source":"current"}'),
+            model_response("Collingwood conditions are mild tonight."),
+        ]
+    )
+    sms = configure(monkeypatch, bedrock)
+    candidate = handler.LocationCandidate("Collingwood", 44.50, -80.22, "CITY", "Ontario, Canada", "nrcan_geonames")
+    captured: list[str] = []
+    monkeypatch.setattr(handler, "_resolve_named_place", lambda query: (captured.append(query) or handler.LocationResolution(candidate, "resolved")))
+    monkeypatch.setattr(handler, "_fetch_weather", lambda *_coords: handler._normalize_hourly_weather(hourly_payload()))
+
+    handler.lambda_handler(sns_event("test-allowed-sender", "Weather in Collingwood this evening"), None)
+
+    assert captured == ["Collingwood"]
+    assert sms.calls[0]["MessageBody"] == "Collingwood conditions are mild tonight."
+
+
+def test_interpreter_prompt_sets_canada_ontario_named_place_defaults() -> None:
+    prompt = handler.EXTRACTION_SYSTEM_PROMPT.casefold()
+
+    assert "assume canada" in prompt
+    assert "prefer ontario" in prompt
+    assert "collingwood" in prompt
+    assert "popularity/relevance" in prompt
 
 
 def test_llm_weather_intent_routes_natural_wording_without_weather_keywords(

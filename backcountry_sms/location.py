@@ -66,7 +66,7 @@ def resolve_named_place(place_query: str) -> LocationResolution:
 
 
 def _resolve_named_place_uncached(place_query: str) -> LocationResolution:
-    """Use provider candidates only; a Canada/Ontario bias never permits a guessed point."""
+    """Use provider candidates only; Canada/Ontario is a ranking bias, never a guessed point."""
     try:
         with trace_span("location.lookup", provider="nrcan_geonames"):
             canadian_candidates = search_canadian_geonames(place_query)
@@ -241,7 +241,11 @@ def rank_location_candidates(place_query: str, candidates: list[LocationCandidat
 def candidate_rank(candidate: LocationCandidate, query: str) -> int:
     rank = 0
     if candidate.name.casefold() == query or _candidate_matches_query(candidate, query): rank += 3
+    # The Canadian provider is queried first with an Ontario filter. Keep the
+    # same preference when Amazon Places is needed as a fallback, while still
+    # letting provider relevance/popularity decide between equivalent matches.
     if candidate.source == "nrcan_geonames": rank += 1
+    if re.search(r"\b(?:can|canada)\b", candidate.region, re.IGNORECASE): rank += 1
     if "ontario" in candidate.region.casefold() or candidate.source == "nrcan_geonames": rank += 1
     if any(token in candidate.feature_type.casefold() for token in ("lake", "water", "park", "point", "poi", "store")): rank += 1
     return rank
