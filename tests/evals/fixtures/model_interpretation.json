@@ -120,5 +120,41 @@
       "location_source": "current"
     },
     "offline_response": "{\"intent\":\"weather\",\"location_text\":\"Burnt Island Lake\",\"current_location_text\":\"Burnt Island Lake\",\"coordinates\":null,\"time_window\":\"tomorrow\",\"activity\":\"general\",\"location_source\":\"current\"}"
+  },
+  {
+    "id": "BUG-0002-CROSSING-001",
+    "description": "Weather-dependent open-water decision inherits the newest lake location",
+    "history": [
+      {"input": "We are at Burnt Island Lake today. Any rain tonight?", "output": "Burnt Island Lake tonight: light wind."}
+    ],
+    "current_sms": "Can I safely cross this lake at noon?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "Burnt Island Lake",
+      "current_location_text": "",
+      "coordinates": null,
+      "time_window": "noon",
+      "activity": "open-water crossing",
+      "location_source": "history"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"Burnt Island Lake\",\"current_location_text\":\"\",\"coordinates\":null,\"time_window\":\"noon\",\"activity\":\"open-water crossing\",\"location_source\":\"history\"}"
+  },
+  {
+    "id": "BUG-0002-TARP-001",
+    "description": "Weather-dependent shelter decision inherits the newest lake location",
+    "history": [
+      {"input": "We are at Burnt Island Lake today. Any rain tonight?", "output": "Burnt Island Lake tonight: light wind."}
+    ],
+    "current_sms": "Should I put the tarp up before bed?",
+    "expected": {
+      "intent": "weather",
+      "location_text": "Burnt Island Lake",
+      "current_location_text": "",
+      "coordinates": null,
+      "time_window": "overnight",
+      "activity": "camping",
+      "location_source": "history"
+    },
+    "offline_response": "{\"intent\":\"weather\",\"location_text\":\"Burnt Island Lake\",\"current_location_text\":\"\",\"coordinates\":null,\"time_window\":\"overnight\",\"activity\":\"camping\",\"location_source\":\"history\"}"
   }
 ]

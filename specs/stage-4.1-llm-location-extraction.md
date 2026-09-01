@@ -45,12 +45,18 @@ flow.
   named-location fields and `evening` as the time window. The place is unqualified by country or
   province, so the interpretation and provider path use Canada as the country prior and prefer
   Ontario without inventing coordinates or turning the missing-place case into Collingwood.
+- A question about whether, when, or how to carry out an outdoor activity is weather-related when
+  current weather would materially help answer it, even without an explicit weather keyword. This
+  includes paddling, open-water crossings, camping, shelter, and clothing decisions. A deictic
+  reference such as `this lake`, `here`, or `the campsite` may refer to the newest grounded history
+  location.
 - Current/history precedence is owned by the bounded interpretation contract. The application
   validates its structured invariants—required fields, a matching current-source pair, and history
-  membership—but does not independently parse the natural-language current SMS to decide whether
-  the model should have selected history. Do not add marker-specific parsers for phrases such as
-  `at`, `in`, or `near`; a location-free follow-up may still use the newest permitted history
-  location.
+  membership. For a location-free follow-up, the application may canonicalize a model label to a
+  matching grounded history label, downgrade a prior location mislabeled as current, and discard
+  model-supplied coordinates that were not repeated in the current SMS. It may resolve bounded
+  deictic placeholders to the newest grounded history label, but must reject arbitrary unsourced
+  values. Direct current-SMS coordinates remain separately validated.
 - A current-sourced named place is rejected unless `current_location_text` is present and matches
   `location_text`. Direct current-SMS coordinates remain separately validated and do not require a
   named location.
@@ -103,9 +109,11 @@ The fixed system prompt must require:
   follows separately (for example, `I'm in Toronto now, what's the weather?`);
 - preference for the most recent explicit location in supplied history;
 - current-message location taking precedence over history;
+- weather-dependent outdoor decisions route through weather even without explicit weather keywords;
+- deictic follow-ups inherit the newest grounded history location when one is available;
 - `current_location_text` only when it is grounded in the current SMS, and never conflicting with
-  `location_text` or `location_source`; this is an LLM instruction, not a local natural-language
-  parser requirement;
+  `location_text` or `location_source`; the application may safely correct a history-source mislabel
+  using grounded history membership;
 - `null` or an empty field when location is absent or unclear;
 - bounded short strings and no sensitive data.
 

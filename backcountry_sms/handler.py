@@ -373,10 +373,14 @@ def _extract_weather_context(user_text: str, history: Sequence[ContextInteractio
         LOGGER.info("weather_extraction_invalid_location_source")
         return None
     coordinates = parsed["coordinates"]
-    if coordinates is not None and not isinstance(coordinates, Mapping):
-        LOGGER.info("weather_extraction_invalid_coordinates")
-        return None
-    if coordinates is not None and _coordinates_from_context({"coordinates": coordinates}) is None:
+    if location_source == "history" and _parse_coordinates(user_text) is None:
+        # History may contain a prior coordinate, but the current follow-up has
+        # not re-authorized that point. Named history locations remain usable.
+        coordinates = None
+    elif coordinates is not None and (
+        not isinstance(coordinates, Mapping)
+        or _coordinates_from_context({"coordinates": coordinates}) is None
+    ):
         LOGGER.info("weather_extraction_invalid_coordinates")
         return None
     time_window = parsed["time_window"]
@@ -407,6 +411,34 @@ def _extract_weather_context(user_text: str, history: Sequence[ContextInteractio
         location_source = "current"
     normalized_location = _short_ascii(location_text) if location_text is not None else ""
     normalized_current = _short_ascii(current_location_text)
+    history_location = _newest_history_location(history)
+    if location_source == "current" and normalized_current and not re.search(
+        rf"\b{re.escape(normalized_current)}\b", user_text, re.IGNORECASE
+    ):
+        candidate_location = _canonicalize_history_location(normalized_location, history) if normalized_location else ""
+        candidate_current = _canonicalize_history_location(normalized_current, history) if normalized_current else ""
+        if (
+            history_location
+            and (_history_location_is_grounded(candidate_location, history) or _history_location_is_grounded(candidate_current, history))
+        ):
+            location_source = "history"
+            normalized_location = candidate_location if _history_location_is_grounded(candidate_location, history) else candidate_current
+            normalized_current = ""
+    if (
+        location_source == "current"
+        and normalized_location
+        and normalized_current
+        and not re.search(rf"\b{re.escape(normalized_current)}\b", user_text, re.IGNORECASE)
+        and _history_location_is_grounded(normalized_location, history)
+    ):
+        # A model can label a prior location as current on an anaphoric
+        # follow-up. Keep the grounded place, but preserve its true source.
+        location_source = "history"
+        normalized_current = ""
+    if location_source == "history" and normalized_location:
+        normalized_location = _canonicalize_history_location(normalized_location, history)
+        if _is_deictic_location(normalized_location):
+            normalized_location = _newest_history_location(history)
     # Some supported models correctly extract a current place and source but
     # omit the redundant current_location_text field. If the extracted place
     # is explicitly present in the current SMS, canonicalize that field from
@@ -740,6 +772,32 @@ def _history_location_is_grounded(location_text: str, history: Sequence[ContextI
         if labels:
             return any(location_text.casefold() == label.casefold() for label in labels)
     return False
+
+
+def _canonicalize_history_location(location_text: str, history: Sequence[ContextInteraction]) -> str:
+    """Return the matching label from history when the model adds a qualifier."""
+    normalized = location_text.casefold()
+    candidates: set[str] = set()
+    for interaction in history:
+        candidates.update(_historical_location_labels(interaction.input_body))
+        candidates.update(_historical_location_labels(interaction.output_body))
+    for candidate in sorted(candidates, key=len, reverse=True):
+        candidate_lower = candidate.casefold()
+        if re.search(rf"\b{re.escape(candidate_lower)}\b", normalized):
+            return candidate
+    return location_text
+
+
+def _is_deictic_location(location_text: str) -> bool:
+    return bool(re.fullmatch(r"(?:here|there|(?:this|that|the)\s+(?:lake|place|location|park|area|camp|campsite|shelter))", location_text.casefold()))
+
+
+def _newest_history_location(history: Sequence[ContextInteraction]) -> str:
+    for interaction in reversed(history):
+        candidates = _historical_location_labels(interaction.input_body) | _historical_location_labels(interaction.output_body)
+        if candidates:
+            return max(candidates, key=len)
+    return ""
 
 
 def _bound_sms(text: str, fallback: str) -> str:

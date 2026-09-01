@@ -15,8 +15,8 @@ The current worktree also contains uncommitted Stage 9.2/9.3.2 fire-ban and RAG 
 changes, related tests and performance notes, and proposed Stage 10 specifications. Those changes
 are not a clean release until their review and applicable final validation are complete.
 
-Current bug work: `BUG-0001` is closed and verified on the dedicated demo capture stack; this is the
-project's only deployed environment.
+Current bug work: `BUG-0001` and `BUG-0002` are closed and verified on the dedicated demo capture
+stack; this is the project's only deployed environment.
 
 ## Done — deployed and verified
 

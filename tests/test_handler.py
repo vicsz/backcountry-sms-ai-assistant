@@ -884,6 +884,74 @@ def test_bug_0001_current_grounded_location_can_fill_omitted_redundant_field(
     assert context["current_location_text"] == "Collingwood"
 
 
+def test_bug_0002_prompt_routes_weather_dependent_outdoor_decisions() -> None:
+    prompt = handler.EXTRACTION_SYSTEM_PROMPT.casefold()
+    advice_prompt = handler.ADVICE_SYSTEM_PROMPT.casefold()
+
+    assert "outdoor activity" in prompt
+    assert "weather would materially help" in prompt
+    assert "cross this lake at noon" in prompt
+    assert "put the tarp up before bed" in prompt
+    assert "never guarantee that an activity is safe" in advice_prompt
+
+
+def test_bug_0002_history_location_with_qualifier_is_canonicalized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    interpretation = '{"intent":"weather","location_text":"Burnt Island Lake, Algonquin","current_location_text":"","coordinates":null,"time_window":"noon","activity":"open-water crossing","location_source":"history"}'
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: interpretation)
+    history = [handler.ContextInteraction("We are at Burnt Island Lake today.", "Weather noted.", "prior")]
+
+    context = handler._extract_weather_context("Can I safely cross this lake at noon?", history)
+
+    assert context is not None
+    assert context["location_text"] == "Burnt Island Lake"
+    assert context["location_source"] == "history"
+
+
+def test_bug_0002_deictic_history_location_uses_newest_grounded_label(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    interpretation = '{"intent":"weather","location_text":"the lake","current_location_text":"","coordinates":null,"time_window":"noon","activity":"open-water crossing","location_source":"history"}'
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: interpretation)
+    history = [handler.ContextInteraction("We are at Burnt Island Lake today.", "Weather noted.", "prior")]
+
+    context = handler._extract_weather_context("Can I safely cross this lake at noon?", history)
+
+    assert context is not None
+    assert context["location_text"] == "Burnt Island Lake"
+    assert context["location_source"] == "history"
+
+
+def test_bug_0002_history_follow_up_discards_inherited_coordinates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    interpretation = '{"intent":"weather","location_text":"Burnt Island Lake","current_location_text":"","coordinates":{"latitude":45.62,"longitude":-78.42},"time_window":"overnight","activity":"camping","location_source":"history"}'
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: interpretation)
+    history = [handler.ContextInteraction("We are at Burnt Island Lake today.", "Weather noted.", "prior")]
+
+    context = handler._extract_weather_context("Should I put the tarp up before bed?", history)
+
+    assert context is not None
+    assert context["location_text"] == "Burnt Island Lake"
+    assert context["coordinates"] is None
+
+
+def test_bug_0002_model_current_label_is_downgraded_to_grounded_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    interpretation = '{"intent":"weather","location_text":"Burnt Island Lake","current_location_text":"Burnt Island Lake","coordinates":null,"time_window":"overnight","activity":"camping","location_source":"current"}'
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: interpretation)
+    history = [handler.ContextInteraction("We are at Burnt Island Lake today.", "Weather noted.", "prior")]
+
+    context = handler._extract_weather_context("Should I put the tarp up before bed?", history)
+
+    assert context is not None
+    assert context["location_text"] == "Burnt Island Lake"
+    assert context["current_location_text"] == ""
+    assert context["location_source"] == "history"
+
+
 def test_llm_weather_intent_routes_natural_wording_without_weather_keywords(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -107,7 +107,12 @@ def select_weather_period(periods: list[dict[str, object]], time_window: str) ->
     first_day = str(periods[0]["time"])[:10]
     candidates = [p for p in periods if str(p["time"])[:10] > first_day] if "tomorrow" in normalized else periods
     candidates = candidates or periods
-    desired_hour = 9 if "morning" in normalized else 18 if "tonight" in normalized else None
+    desired_hour = (
+        9 if "morning" in normalized
+        else 12 if any(term in normalized for term in ("noon", "midday", "mid day"))
+        else 18 if "tonight" in normalized
+        else None
+    )
     if desired_hour is not None:
         for period in candidates:
             if str(period["time"])[11:13] == f"{desired_hour:02d}":

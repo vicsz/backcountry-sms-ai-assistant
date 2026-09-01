@@ -48,6 +48,17 @@ def test_expired_weather_is_refetched(monkeypatch) -> None:
     assert len(calls) == 2
 
 
+def test_noon_weather_window_selects_midday_period() -> None:
+    periods = [
+        {"time": "2026-09-01T09:00", "temperature_c": 15},
+        {"time": "2026-09-01T12:00", "temperature_c": 20},
+        {"time": "2026-09-01T15:00", "temperature_c": 22},
+    ]
+
+    assert weather.select_weather_period(periods, "noon")["time"] == "2026-09-01T12:00"
+    assert weather.select_weather_period(periods, "midday")["time"] == "2026-09-01T12:00"
+
+
 class _Response:
     def __init__(self, payload: dict[str, object], calls: list[bool]) -> None:
         self.payload = payload
