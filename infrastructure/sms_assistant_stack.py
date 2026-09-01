@@ -125,8 +125,16 @@ class BackcountrySmsAssistantStack(Stack):
                     cdk.Fn.condition_and(
                         cdk.Fn.condition_equals(cdk.Aws.STACK_NAME, "BackcountrySmsEchoTest"),
                         cdk.Fn.condition_equals(deployment_environment.value_as_string, "test"),
-                        cdk.Fn.condition_equals(test_mode.value_as_string, "true"),
-                        cdk.Fn.condition_equals(sms_delivery_mode.value_as_string, "capture"),
+                        cdk.Fn.condition_or(
+                            cdk.Fn.condition_and(
+                                cdk.Fn.condition_equals(test_mode.value_as_string, "true"),
+                                cdk.Fn.condition_equals(sms_delivery_mode.value_as_string, "capture"),
+                            ),
+                            cdk.Fn.condition_and(
+                                cdk.Fn.condition_equals(test_mode.value_as_string, "false"),
+                                cdk.Fn.condition_equals(sms_delivery_mode.value_as_string, "live"),
+                            ),
+                        ),
                         cdk.Fn.condition_or(
                             cdk.Fn.condition_equals(bedrock_model_id.value_as_string, DEFAULT_MODEL_ID),
                             cdk.Fn.condition_and(
@@ -140,8 +148,8 @@ class BackcountrySmsAssistantStack(Stack):
                     ),
                 ),
                 assert_description=(
-                    "Production is ca-central-1 Lite/live only; test capture may use Lite or "
-                    "Nova Micro only in a supported US source region."
+                    "The demo is the only deployable target; it may use capture or allow-listed "
+                    "live delivery with Lite or Nova Micro in a supported region."
                 ),
                 )
             ],
@@ -361,36 +369,129 @@ class BackcountrySmsAssistantStack(Stack):
         dashboard = cloudwatch.Dashboard(
             self,
             "OperationsDashboard",
-            dashboard_name=(
-                f"BackcountrySmsAssistantTest-{self.region}"
-                if is_test_stack
-                else "BackcountrySmsAssistant"
-            ),
+            dashboard_name="Backcountry-Demo",
+            start="-PT1H",
         )
         namespace = "BackcountrySmsAssistant"
-        def app_metric(name: str, statistic: str = "Sum") -> cloudwatch.Metric:
-            return cloudwatch.Metric(namespace=namespace, metric_name=name, statistic=statistic)
+        def app_metric(name: str, statistic: str = "Sum", label: str | None = None) -> cloudwatch.Metric:
+            return cloudwatch.Metric(
+                namespace=namespace,
+                metric_name=name,
+                statistic=statistic,
+                label=label,
+            )
 
         dashboard.add_widgets(
+            cloudwatch.TextWidget(
+                width=6,
+                height=3,
+                markdown=(
+                    "## DEMO HEALTH\n"
+                    "**Live delivery**\n"
+                    "Allow-listed sender only"
+                ),
+            ),
+            cloudwatch.SingleValueWidget(
+                title="Messages and replies",
+                metrics=[
+                    app_metric("MessagesReceived", label="Messages received"),
+                    app_metric("RepliesSent", label="Replies sent"),
+                    app_metric("FallbackReplies", label="Fallback replies"),
+                ],
+                width=6,
+                height=3,
+                set_period_to_time_range=True,
+            ),
+            cloudwatch.SingleValueWidget(
+                title="AI and provider calls",
+                metrics=[
+                    app_metric("BedrockCalls", label="AI calls"),
+                    app_metric("WeatherCalls", label="Weather calls"),
+                    app_metric("LocationResolutions", label="Location lookups"),
+                    app_metric("RetrievalCalls", label="Guide lookups"),
+                ],
+                width=6,
+                height=3,
+                set_period_to_time_range=True,
+            ),
+            cloudwatch.SingleValueWidget(
+                title="Errors, warnings, fallbacks",
+                metrics=[
+                    echo_function.metric_errors(statistic="Sum", label="Lambda errors"),
+                    app_metric("FallbackReplies", label="Fallback replies"),
+                    app_metric("SmsSendFailures", label="SMS failures"),
+                ],
+                width=6,
+                height=3,
+                set_period_to_time_range=True,
+            ),
+        )
+        dashboard.add_widgets(
             cloudwatch.GraphWidget(
-                title="Traffic and replies",
-                left=[app_metric("MessagesReceived"), app_metric("RepliesSent"), app_metric("FallbackReplies")],
-                right=[app_metric("MessagesIgnored")],
+                title="Message flow",
+                left=[app_metric("MessagesReceived", label="Messages received"), app_metric("RepliesSent", label="Replies sent")],
+                right=[app_metric("MessagesIgnored", label="Messages ignored"), app_metric("FallbackReplies", label="Fallback replies")],
+                width=12,
+                height=6,
+            ),
+            cloudwatch.LogQueryWidget(
+                title="Recent errors and warnings",
+                log_group_names=[log_group.log_group_name],
+                query_string=(
+                    "fields @timestamp, @message\n"
+                    "| filter @message like /(?i)(error|warn|failed|failure|fallback|rejected)/\n"
+                    "| sort @timestamp desc\n"
+                    "| limit 10"
+                ),
+                view=cloudwatch.LogQueryVisualizationType.TABLE,
+                width=12,
+                height=6,
+            ),
+        )
+        dashboard.add_widgets(
+            cloudwatch.GraphWidget(
+                title="Dependency health",
+                left=[
+                    app_metric("BedrockFailures", label="AI failures"),
+                    app_metric("LocationFailures", label="Location failures"),
+                    app_metric("WeatherFailures", label="Weather failures"),
+                    app_metric("RetrievalFailures", label="Guide failures"),
+                ],
+                right=[
+                    echo_function.metric_errors(statistic="Sum", label="Lambda errors"),
+                    echo_function.metric_throttles(statistic="Sum", label="Lambda throttles"),
+                ],
+                width=12,
+                height=6,
             ),
             cloudwatch.GraphWidget(
-                title="Dependency failures",
-                left=[app_metric("BedrockFailures"), app_metric("LocationFailures"), app_metric("WeatherFailures"), app_metric("SmsSendFailures")],
-                right=[echo_function.metric_errors(statistic="Sum"), echo_function.metric_throttles(statistic="Sum")],
+                title="Response latency",
+                left=[app_metric("ProcessingDurationMs", "Average", "Average response"), app_metric("ProcessingDurationMs", "p95", "95th percentile")],
+                right=[app_metric("BedrockCallDurationMs", "p95", "AI call p95"), app_metric("WeatherCallDurationMs", "p95", "Weather call p95")],
+                width=12,
+                height=6,
             ),
-            cloudwatch.GraphWidget(
-                title="Latency and usage",
-                left=[app_metric("ProcessingDurationMs", "Average"), app_metric("BedrockCallsPerMessage", "Average")],
-                right=[app_metric("BedrockCalls"), app_metric("WeatherCalls")],
+        )
+        dashboard.add_widgets(
+            cloudwatch.TextWidget(
+                width=12,
+                height=3,
+                markdown=(
+                    "### Safety and delivery boundary\n"
+                    "Live delivery is enabled for the allow-listed demo sender.\n"
+                    "Provider calls and outbound SMS remain explicitly observable."
+                ),
             ),
-            cloudwatch.GraphWidget(
-                title="Latency percentiles",
-                left=[app_metric("ProcessingDurationMs", "p50"), app_metric("ProcessingDurationMs", "p95")],
-                right=[app_metric("BedrockCallDurationMs", "p95"), app_metric("WeatherCallDurationMs", "p95")],
+            cloudwatch.TextWidget(
+                width=12,
+                height=3,
+                markdown=(
+                    "### Investigation\n"
+                    "[Open the AWS X-Ray service map]("
+                    f"https://{self.region}.console.aws.amazon.com/xray/home?region={self.region}#/service-map"
+                    ") for sampled invocation waterfalls.\n"
+                    "Use the recent-events table above for the first error check."
+                ),
             ),
         )
         echo_function.add_to_role_policy(
@@ -444,20 +545,6 @@ class BackcountrySmsAssistantStack(Stack):
                 resources=["*"],
             )
         )
-        dashboard.add_widgets(
-            cloudwatch.TextWidget(
-                width=24,
-                height=3,
-                markdown=(
-                    "### Trace investigation\n"
-                    "Open the [AWS X-Ray service map]("
-                    f"https://{self.region}.console.aws.amazon.com/xray/home?region={self.region}#/service-map"
-                    ") for sampled invocation waterfalls. Traces contain only bounded operation, "
-                    "provider, outcome, and error-type attributes; CloudWatch metrics remain the aggregate source."
-                ),
-            )
-        )
-
         CfnOutput(
             self,
             "InboundSmsTopicArn",

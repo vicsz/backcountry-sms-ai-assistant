@@ -6,4 +6,4 @@ ideas that are not yet scoped remain in [`docs/ideas.md`](../docs/ideas.md).
 | ID | Title | Status | Acceptance tests | Commit |
 | --- | --- | --- | --- | --- |
 | ENH-0001 | Current-news capability response | Closed | `test_enh_0001_current_news_explains_data_boundary_without_model_or_retrieval`; demo capture passed | Pending |
-| ENH-0002 | Operational dashboard clarity and recent-error visibility | Proposed | Pending | Pending |
+| ENH-0002 | Operational dashboard clarity and recent-error visibility | Closed | `test_dashboard_is_single_demo_dashboard_for_every_stack`; `test_dashboard_prioritizes_demo_health_calls_and_recent_redacted_events`; demo inspection `ENH-0002-DASHBOARD-001` | `e51e1c4` |

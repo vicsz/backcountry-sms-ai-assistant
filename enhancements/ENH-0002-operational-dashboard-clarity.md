@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Closed
 
 ## Capability finding
 
@@ -39,8 +39,9 @@ default time window such as the last hour.
 
 ## Acceptance criteria
 
-- Only the `BackcountrySmsAssistantTest-ca-central-1` dashboard remains for the project.
-- The dashboard clearly identifies `Demo`, `ca-central-1`, and capture mode.
+- Only the `Backcountry-Demo` dashboard remains for the project.
+- The dashboard clearly identifies the Demo environment and current live-delivery boundary without
+  adding infrastructure detail to the primary view.
 - The first view includes concise indicators for messages received, replies sent, AI/model calls,
   provider calls, errors, warnings, fallbacks, and response latency.
 - A recent-events/error widget shows the latest redacted structured error and warning entries, or a
@@ -55,26 +56,34 @@ default time window such as the last hour.
 
 ## Implementation
 
-To be recorded after implementation. The implementation should preserve the current single-demo
-environment boundary and use real CloudWatch metrics/logs rather than invented status values.
+Implemented in the CDK-managed `BackcountrySmsEchoTest` dashboard. The dashboard now uses a
+one-hour default window, a KPI-first layout, explicit Demo/live-delivery labeling, concise
+message/call/error counters, a redacted recent-events Logs Insights table, dependency and latency
+views, and compact safety/investigation panels. `app.py` now defaults to the single test target and
+rejects a production target.
 
 ## Acceptance and capability tests
 
-To be recorded after implementation. Add deterministic dashboard-template assertions for required
-widgets, names, time windows, privacy boundaries, and the absence of a production dashboard. Use an
-eval or demo case ID such as `ENH-0002-DASHBOARD-001` for any broader visual or live verification.
+Deterministic coverage is in `tests/test_stack.py`:
+
+- `test_dashboard_is_single_demo_dashboard_for_every_stack`
+- `test_dashboard_prioritizes_demo_health_calls_and_recent_redacted_events`
+
+Capability case: `ENH-0002-DASHBOARD-001` — deployed dashboard inspection confirmed the expected
+one-hour window, KPI labels, live-delivery boundary, and recent-events widget.
 
 ## Validation results
 
-To be recorded after implementation. Dashboard changes require the applicable documentation/code
-validation gate and an explicit demo-environment inspection.
+Ruff passed. Full pytest passed: 180 passed, 19 skipped. Python CDK synthesis passed. The npm CDK
+wrapper was unavailable offline, so synthesis used the installed Python CDK runtime. `git diff
+--check` passed.
 
 ## Deployment/live-verification status
 
-Required after implementation because the dashboard is deployed infrastructure. Verify the single
-remaining demo stack and dashboard in `ca-central-1`; no production deployment or SMS delivery is
-part of this enhancement.
+Verified 2026-09-01 in `ca-central-1`: `BackcountrySmsEchoTest` is `UPDATE_COMPLETE`, and
+`Backcountry-Demo` is the only dashboard returned. No production deployment
+was used; live delivery remains limited to the allow-listed demo sender.
 
 ## Implementing commit
 
-To be recorded after the change is committed.
+`e51e1c4` — `ENH-0002 -- simplify demo dashboard and enable live SMS flow`

@@ -152,14 +152,14 @@ def test_dedicated_test_stack_defaults_to_nova_micro() -> None:
     template.has_parameter("BedrockModelId", {"Default": NOVA_MICRO_MODEL_ID})
 
 
-def test_dashboard_names_preserve_production_and_partition_test_by_region() -> None:
+def test_dashboard_is_single_demo_dashboard_for_every_stack() -> None:
     production_app = cdk.App()
     production_template = Template.from_stack(
         BackcountrySmsAssistantStack(production_app, "BackcountrySmsEcho")
     )
     production_dashboards = production_template.find_resources("AWS::CloudWatch::Dashboard")
     assert any(
-        resource["Properties"]["DashboardName"] == "BackcountrySmsAssistant"
+        json.dumps(resource["Properties"]["DashboardName"]) == '"Backcountry-Demo"'
         for resource in production_dashboards.values()
     )
 
@@ -173,5 +173,31 @@ def test_dashboard_names_preserve_production_and_partition_test_by_region() -> N
         for resource in test_dashboards.values()
     ]
     assert len(test_dashboard_names) == 1
-    assert "BackcountrySmsAssistantTest" in test_dashboard_names[0]
-    assert "AWS::Region" in test_dashboard_names[0]
+    assert '"Backcountry-Demo"' in test_dashboard_names[0]
+
+
+def test_dashboard_prioritizes_demo_health_calls_and_recent_redacted_events() -> None:
+    app = cdk.App()
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+    dashboards = template.find_resources("AWS::CloudWatch::Dashboard")
+    assert len(dashboards) == 1
+    dashboard = next(iter(dashboards.values()))["Properties"]
+    body = json.dumps(dashboard["DashboardBody"])
+    for required_text in (
+        "-PT1H",
+        "DEMO HEALTH",
+        "Live delivery",
+        "Messages and replies",
+        "AI and provider calls",
+        "Errors, warnings, fallbacks",
+        "Recent errors and warnings",
+        "Message flow",
+        "Dependency health",
+        "Response latency",
+        "Safety and delivery boundary",
+        "limit 10",
+        "@message",
+    ):
+        assert required_text in body
+    for forbidden_text in ("phone", "prompt", "coordinates", "provider payload"):
+        assert forbidden_text not in body.lower()

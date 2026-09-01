@@ -9,14 +9,14 @@ traffic.
 | Environment | Deployment state | Delivery mode | Purpose |
 | --- | --- | --- | --- |
 | Local | Not deployed | Test doubles/offline fixtures | Unit tests, synthesis, and local iteration |
-| Demo | Deployed as `BackcountrySmsEchoTest` | Capture mode | Explicit Bedrock/provider checks with synthetic inputs; no SMS or SNS delivery |
-| Production | Not deployed | Not applicable | Future real-SMS deployment target; configuration/specification may exist, but is not live |
+| Demo | Deployed as `BackcountrySmsEchoTest` | Live delivery | Explicit Bedrock/provider checks and allow-listed SMS delivery; no production traffic |
+| Production | Not deployed | Not applicable | No production environment exists in this repository |
 
 ## Verification vocabulary
 
 - **Local validation** means lint, unit tests, synthesis, and other offline checks.
 - **Demo live verification** means an explicit invocation against the deployed demo stack. It may
-  call Bedrock or public providers, but must use synthetic inputs and capture mode.
+  call Bedrock or public providers; SMS delivery is limited to the allow-listed demo sender.
 - **Production live verification** means an explicit check against a deployed production target.
   It requires separate authorization when it could send real SMS or affect production data.
 - **Deployed** describes infrastructure that actually exists. A CDK target, stack definition, or

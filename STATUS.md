@@ -29,7 +29,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Stage 4.1 — LLM location extraction | Deployed; live acceptance verified |
 | Stage 4.2 — current-location precedence | Deployed; live follow-up checks verified |
 | Stage 5 — short-lived message context | Deployed and verified; bounded encrypted history with approximately seven-day TTL |
-| Stage 6 — observability | Deployed; redacted logs, metrics, dashboard, retention, and alarms verified |
+| Stage 6 — observability | Deployed; redacted logs, metrics, alarms, and the redesigned single demo dashboard verified |
 | Stage 6.1 — distributed tracing | Deployed; X-Ray/ADOT trace verified |
 | Stage 6.2 — reliability | Deployed; bounded retries, idempotency, and failure behavior verified |
 | Stage 6.3 — performance improvements | Deployed and measured; retained changes are evidence-backed |
