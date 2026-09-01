@@ -1,6 +1,7 @@
 # Stage 4.1 — LLM-driven location extraction
 
-**Status:** Complete; deployed and live acceptance verified
+**Status:** Complete; deployed and live acceptance verified. BUG-0001 follow-up correction is
+verified on the dedicated capture stack; production rollout remains pending.
 
 ## Goal
 
@@ -31,12 +32,19 @@ flow.
 
 - `intent` is one of `weather`, `general`, or `unclear`.
 - `location_text` is the place phrase as understood from the message, cleaned of conversational
-  filler such as `now`, `currently`, and `please`.
+  or temporal filler such as `now`, `currently`, `this evening`, `tonight`, and `please`.
 - `current_location_text` is the cleaned place phrase from the current SMS only, or an empty
   string when no current location is extracted. When it is non-empty, it must match `location_text`
   and `location_source` must be `current`.
 - `current_location_text` is mandatory in every valid interpretation. `null`, omission, or a
-  non-string value is malformed and is rejected before geocoding.
+  non-string value is malformed and is rejected before geocoding. When the model returns an empty
+  string for this redundant field but returns a current-sourced `location_text` whose exact bounded
+  phrase is present in CURRENT SMS, the application may canonicalize `current_location_text` from
+  that grounded field.
+- A request such as `Weather in Collingwood this evening` must produce `Collingwood` for both
+  named-location fields and `evening` as the time window. The place is unqualified by country or
+  province, so the interpretation and provider path use Canada as the country prior and prefer
+  Ontario without inventing coordinates or turning the missing-place case into Collingwood.
 - Current/history precedence is owned by the bounded interpretation contract. The application
   validates its structured invariants—required fields, a matching current-source pair, and history
   membership—but does not independently parse the natural-language current SMS to decide whether
@@ -111,6 +119,7 @@ fall back safely when the response is malformed.
 - `I'm in Toronto now ... what's the weather` → `Toronto`, not `Toronto now`, even though the
   location is expressed as where the user is rather than as `weather in Toronto`.
 - `Currently near the Portage Store, forecast tomorrow?` → `Portage Store`.
+- `Weather in Collingwood this evening` → `Collingwood` and `evening`; no extraction rejection.
 - `weather at 45.62 N, 78.42 W` → exact normalized coordinates; no geocoding call.
 - Decimal, compass, labelled, slash-separated, and extra-whitespace coordinate formats.
 - Latitude/longitude outside valid ranges → correction reply; no weather call.

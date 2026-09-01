@@ -407,6 +407,18 @@ def _extract_weather_context(user_text: str, history: Sequence[ContextInteractio
         location_source = "current"
     normalized_location = _short_ascii(location_text) if location_text is not None else ""
     normalized_current = _short_ascii(current_location_text)
+    # Some supported models correctly extract a current place and source but
+    # omit the redundant current_location_text field. If the extracted place
+    # is explicitly present in the current SMS, canonicalize that field from
+    # the grounded location instead of rejecting the request.
+    if (
+        intent != "information_lookup"
+        and location_source == "current"
+        and normalized_location
+        and not normalized_current
+        and re.search(rf"\b{re.escape(normalized_location)}\b", user_text, re.IGNORECASE)
+    ):
+        normalized_current = normalized_location
     if intent != "information_lookup" and normalized_location and coordinates is None:
         if location_source == "none":
             LOGGER.info("weather_extraction_location_without_source")

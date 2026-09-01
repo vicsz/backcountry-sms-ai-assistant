@@ -15,6 +15,9 @@ The current worktree also contains uncommitted Stage 9.2/9.3.2 fire-ban and RAG 
 changes, related tests and performance notes, and proposed Stage 10 specifications. Those changes
 are not a clean release until their review and applicable final validation are complete.
 
+Current bug work: `BUG-0001` is fixed and verified on the dedicated capture test stack; production
+rollout and production live verification remain pending.
+
 ## Done — deployed and verified
 
 | Spec / capability | Evidence status |

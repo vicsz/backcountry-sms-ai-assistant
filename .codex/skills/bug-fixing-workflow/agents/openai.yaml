@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Fixing Workflow"
+  short_description: "Track and resolve reported bugs with regression coverage"
+  default_prompt: "Use the bug-fixing workflow for this reported defect."

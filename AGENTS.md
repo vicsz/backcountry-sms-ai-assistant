@@ -41,6 +41,16 @@ publication planning.
 Follow [`development-workflow.md`](development-workflow.md) for implementation, review,
 validation, live checks, and commit sequencing.
 
+- Bug, regression, broken-behavior, or failing-behavior work must follow
+  [`bug-fixing-workflow.md`](bug-fixing-workflow.md), create or update a record under `bugs/`, and
+  add automated regression coverage before commit. Its commit message must begin with the bug ID,
+  for example `BUG-0001 -- fix Collingwood weather interpretation`.
+- Spec implementation commits must begin with the selected spec identifier, for example
+  `SPEC-4.1 -- improve location extraction`.
+- The project-local [`bug-fixing-workflow` skill](.codex/skills/bug-fixing-workflow/SKILL.md) may
+  guide automatic routing, but this repository instruction and the workflow document remain the
+  enforcement authority.
+
 - During iteration, run targeted checks appropriate to the change.
 - After review and the final focused fix, run the applicable final validation gate once.
 - Documentation-only work requires final diff inspection and `git diff --check` plus independent

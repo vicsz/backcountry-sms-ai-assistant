@@ -5,6 +5,32 @@ not an executable script and does not authorize deployment, live provider calls,
 commits by itself. It also defines a cost-aware default: use the smallest capable model, keep
 context bounded, avoid duplicate agent work, and reserve expensive checks for the final gate.
 
+## Choose the work type
+
+This workflow defines the common engineering lifecycle: bounded scope, review, validation,
+live-check, and commit controls. New behavior starts from one bounded spec. Existing broken,
+failing, or regressed behavior starts from
+[`bug-fixing-workflow.md`](bug-fixing-workflow.md), which requires a tracked bug record and an
+automated regression test before commit.
+
+This separation is intentional for both maintainability and demonstration: specs show how planned
+capability is delivered, while bug records show evidence-led diagnosis, corrective change, and
+proof that a known failure does not return. The project-local
+`.codex/skills/bug-fixing-workflow/SKILL.md` provides automatic routing guidance; it does not replace
+these repository rules or authorize side effects.
+
+## Commit naming
+
+Commit messages must begin with the tracked work identifier:
+
+- Bug work: `BUG-#### -- concise fix description`.
+- Spec work: `SPEC-<stage> -- concise implementation description`.
+- Documentation or maintenance work without a bug or spec uses the repository's normal concise
+  prefix.
+
+Use the identifier from the bug record or selected spec, not a newly invented number. A commit may
+reference more than one identifier only when the records explicitly share one bounded change.
+
 ## Start with one spec
 
 Select one spec path and keep the work bounded to its scope, acceptance criteria, and explicit

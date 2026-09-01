@@ -867,6 +867,21 @@ def test_interpreter_prompt_sets_canada_ontario_named_place_defaults() -> None:
     assert "prefer ontario" in prompt
     assert "collingwood" in prompt
     assert "popularity/relevance" in prompt
+    assert "weather in collingwood this evening" in prompt
+    assert "time_window 'evening'" in prompt
+
+
+def test_current_grounded_location_can_fill_omitted_redundant_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    interpretation = '{"intent":"weather","location_text":"Collingwood","current_location_text":"","coordinates":null,"time_window":"evening","activity":"general","location_source":"current"}'
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: interpretation)
+
+    context = handler._extract_weather_context("Weather in Collingwood this evening")
+
+    assert context is not None
+    assert context["location_text"] == "Collingwood"
+    assert context["current_location_text"] == "Collingwood"
 
 
 def test_llm_weather_intent_routes_natural_wording_without_weather_keywords(
