@@ -4,13 +4,16 @@
 > example of how to take a GenAI idea through architecture, implementation, evaluation, safety,
 > observability, and cost-aware operation.
 
+Built by [Victor Szoltysek](https://www.linkedin.com/in/victorszoltysek/), Principal AI & Cloud
+Architect.
+
 ## Why I built it
 
 The idea started in Summer 2026 after six days canoeing and portaging in Algonquin Park, hours from
 civilization and with no cellular service at all. Trip planning is continuous out there: how long
 will the next hop between camps take, will the rain change the route, is a fire ban in effect, and
-did the team win last night? Useful information should not require finding a signal, opening an app, and
-reconstructing a full online workflow.
+did the team win last night? Useful information should not require finding a signal, opening an
+app, and reconstructing a full online workflow.
 
 Apple Messages via satellite makes a short-message interface increasingly practical. The phone can
 exchange a small SMS where the feature is available; the system on the other end still has to
@@ -20,6 +23,28 @@ turn the result into a concise answer.
 That makes this an AI application engineering problem, not just a chatbot prompt. The model
 interprets ambiguous human questions and composes the answer; deterministic code, authoritative
 sources, retention controls, failure handling, and evaluations make the result useful.
+
+On supported iPhones, Messages via satellite can exchange small messages when cellular and Wi-Fi
+are unavailable, subject to device, carrier, regional, and environmental conditions. This project
+provides the ordinary SMS destination on the other end. See [Apple's Canadian satellite guidance](https://support.apple.com/en-ca/105097)
+and [Messages via satellite documentation](https://support.apple.com/en-euro/guide/iphone/iphb9262f4dd/ios).
+
+## Architecture
+
+![Backcountry SMS AI Assistant AWS architecture](aws-architecture.png)
+
+The deployed core is a two-way SMS flow: satellite-enabled iPhone Messages reach AWS End User
+Messaging SMS, which publishes an inbound notification to Amazon SNS and invokes the Python Lambda
+orchestrator. Lambda uses short-lived DynamoDB SMS thread context, provider lookups, and Amazon
+Bedrock, then sends the reply directly through the AWS End User Messaging SMS API.
+
+The source-backed extensions add an Amazon Bedrock Knowledge Base backed by an Amazon S3 Vectors
+vector database over an S3-curated Ontario Parks corpus, plus versioned S3 fire-ban snapshots
+queried through Amazon Athena for geospatial lookups.
+
+The Knowledge Base, S3 Vectors, S3 ingestion, and Athena paths are local or proposed extensions
+pending their own deployment and live-verification gates. SNS is used for inbound notification;
+outbound SMS is sent directly by Lambda through the AWS End User Messaging SMS API.
 
 ## How I built it
 
@@ -44,8 +69,9 @@ deployment or live verification.
 
 ## Technical snapshot
 
-Statically typed Python, AWS CDK, AWS Lambda, SNS, AWS End User Messaging SMS, DynamoDB, Amazon
-Bedrock, Amazon S3, S3 Vectors, Athena, CloudWatch, X-Ray, pytest, Ruff, mypy, and CI/CD.
+Python, AWS CDK, AWS Lambda, Amazon SNS, AWS End User Messaging SMS, DynamoDB, Amazon Bedrock,
+Amazon Bedrock Knowledge Bases, Amazon S3, S3 Vectors vector database, RAG, Athena, CloudWatch,
+X-Ray, pytest, Ruff, mypy, and CI/CD.
 
 ## Example interaction
 
@@ -57,14 +83,6 @@ Bot:   Burnt Island Lake: 12 C tomorrow, 60% chance of rain, gusts up to 28 km/h
 ```
 
 ```text
-User:  I'm in Toronto now. What's the weather?
-Bot:   Toronto: 18 C today with a 30% chance of rain. Light winds. Source: live weather lookup.
-
-User:  What about tomorrow?
-Bot:   Toronto tomorrow: 16 C, 50% chance of rain. Bring a light shell.
-```
-
-```text
 User:  What should I know before visiting Algonquin?
 Bot:   The park guide covers access, facilities, camping areas, and trip-planning context.
        Current fire-ban status: a fire ban is in effect.
@@ -72,52 +90,18 @@ Bot:   The park guide covers access, facilities, camping areas, and trip-plannin
 
 The assistant is intentionally concise: the SMS boundary is part of the product design.
 
-## Apple satellite context
-
-On supported iPhones, Messages via satellite can exchange small iMessage or SMS messages when
-cellular and Wi-Fi coverage are unavailable, including in Canada, subject to device, carrier,
-regional, and environmental conditions. This project does not integrate directly with Apple's
-satellite network; it provides an ordinary SMS destination that can be reached through the phone's
-available connectivity path.
-
-See [Apple's Canadian satellite guidance](https://support.apple.com/en-ca/105097) and [Apple's
-Messages via satellite documentation](https://support.apple.com/en-euro/guide/iphone/iphb9262f4dd/ios)
-for current device, regional, carrier, and environmental limitations.
-
-## Architecture
-
-![Backcountry SMS AI Assistant AWS architecture](aws-architecture.png)
-
-The deployed core is a two-way SMS flow: satellite-enabled iPhone Messages reach AWS End User
-Messaging SMS, which publishes an inbound notification to Amazon SNS and invokes the Python Lambda
-orchestrator. Lambda uses short-lived DynamoDB SMS thread context, provider lookups, and Amazon
-Bedrock, then sends the reply directly through the AWS End User Messaging SMS API.
-
-The source-backed extensions add an Amazon Bedrock Knowledge Base backed by an Amazon S3 Vectors
-vector database (vector bucket and index) over an S3-curated Ontario Parks corpus, plus versioned S3
-fire-ban snapshots queried through Amazon Athena for geospatial lookups.
-
-The Knowledge Base, S3 Vectors, S3 ingestion, and Athena paths are local or proposed extensions
-pending their own deployment and live-verification gates. SNS is used for inbound notification;
-outbound SMS is sent directly by Lambda through the AWS End User Messaging SMS API.
-
-## AI application design
+## What the project demonstrates
 
 The LLM is not the system of record. Deterministic code owns authoritative lookups, coordinates,
-source boundaries, output limits, and failure behavior. The model handles bounded language
-understanding and response synthesis.
+source boundaries, output limits, and failure behavior. The project demonstrates:
 
-Important design choices include:
-
-- statically typed Python with explicit contracts at provider, retrieval, orchestration, and output
-  boundaries;
-- current-message precedence over bounded conversation history and clear instruction/data
-  separation;
-- two Bedrock calls for a typical weather request: intent/context extraction, then answer synthesis
-  from verified data;
-- source-backed RAG for stable park information, with current weather and fire-ban data kept on
-  fresher authoritative paths;
-- layered application guardrails, bounded prompts, retries, fallbacks, and response limits.
+- two Bedrock calls for a typical weather request: intent/context extraction, then answer synthesis;
+- deterministic code for facts, coordinates, source precedence, output limits, and fallbacks;
+- short-lived SMS thread context in DynamoDB;
+- RAG through an Amazon Bedrock Knowledge Base for stable Ontario Parks information;
+- S3 and Athena for versioned fire-ban and geospatial data;
+- automated tests, provider evaluations, model evaluations, and LLM-as-judge assessment;
+- application guardrails, observability, tracing, performance measurement, and cost-aware design.
 
 ## Evaluation and testing
 
