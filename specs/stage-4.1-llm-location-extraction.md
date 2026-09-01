@@ -1,7 +1,7 @@
 # Stage 4.1 — LLM-driven location extraction
 
-**Status:** Complete; deployed and live acceptance verified. BUG-0001 follow-up correction is
-verified on the dedicated capture stack; production rollout remains pending.
+**Status:** Complete; deployed and live acceptance verified on the dedicated demo capture stack.
+This project has no separate production environment.
 
 ## Goal
 

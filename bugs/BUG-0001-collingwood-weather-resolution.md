@@ -2,7 +2,7 @@
 
 ## Status
 
-Awaiting Live Verification
+Closed
 
 ## Reported behavior
 
@@ -99,10 +99,14 @@ NRCan, completed the weather path, returned a bounded weather response, and repo
 
 ## Deployment/live-verification status
 
-Required because the observed defect involved deployed Bedrock interpretation and provider-backed
-weather behavior. Dedicated test-stack live verification passed, but the production stack was not
-changed or invoked because it uses live SMS delivery. Keep this record in `Awaiting Live Verification`
-until the production rollout and its separately authorized verification are complete.
+Live verification was required because the defect involved deployed Bedrock interpretation and
+provider-backed weather behavior. The corrected implementation was deployed to the dedicated
+`BackcountrySmsEchoTest` demo stack in capture mode and passed synthetic run
+`BUG-0001-live-collingwood-003`. The run resolved Collingwood through NRCan, completed the weather
+path, and confirmed `sms_api_called=false` and `sns_published=false`. This is the project's only
+deployed environment; there is no separate production rollout or production verification pending.
+
+The bug is closed because automated validation and demo-environment live verification are complete.
 
 ## Fixing commit
 
