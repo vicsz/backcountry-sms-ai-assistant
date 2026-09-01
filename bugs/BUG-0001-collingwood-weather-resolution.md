@@ -71,14 +71,16 @@ no automatic acceptance of model-invented coordinates, and no real SMS delivery.
 
 ## Regression tests
 
-- `test_collingwood_named_location_reaches_provider_backed_weather_path` verifies that a valid
-  Collingwood interpretation reaches named-place resolution and weather synthesis.
-- `test_unqualified_common_place_prefers_ontario_candidate` verifies that an Ontario Collingwood
-  candidate outranks a same-name U.S. candidate even when the U.S. provider score is higher.
-- `test_interpreter_prompt_sets_canada_ontario_named_place_defaults` protects the interpretation
-  contract wording.
-- `test_current_grounded_location_can_fill_omitted_redundant_field` protects the deployed model
-  behavior that originally caused this bug.
+- `tests/test_handler.py::test_bug_0001_collingwood_named_location_reaches_provider_backed_weather_path`
+  verifies that a valid Collingwood interpretation reaches named-place resolution and weather
+  synthesis.
+- `tests/test_handler.py::test_bug_0001_unqualified_common_place_prefers_ontario_candidate` verifies
+  that an Ontario Collingwood candidate outranks a same-name U.S. candidate even when the U.S.
+  provider score is higher.
+- `tests/test_handler.py::test_bug_0001_interpreter_prompt_sets_canada_ontario_named_place_defaults`
+  protects the interpretation contract wording.
+- `tests/test_handler.py::test_bug_0001_current_grounded_location_can_fill_omitted_redundant_field`
+  protects the deployed model behavior that originally caused this bug.
 
 The first deployed capture after commit `5ba8fa3` failed with the redacted outcome
 `weather_extraction_ungrounded_current_location`, so the fix remains subject to a second deployment

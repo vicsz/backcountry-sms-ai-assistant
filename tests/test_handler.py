@@ -784,7 +784,7 @@ def test_abbreviated_us_city_matches_provider_name() -> None:
     assert resolution.outcome == "resolved"
 
 
-def test_unqualified_common_place_prefers_ontario_candidate() -> None:
+def test_bug_0001_unqualified_common_place_prefers_ontario_candidate() -> None:
     ontario = handler.LocationCandidate(
         "Collingwood", 44.50, -80.22, "CITY", "Collingwood, Ontario, Canada", "amazon_location_places", score=80
     )
@@ -839,7 +839,7 @@ def test_natural_toronto_location_comes_from_interpreter_not_phrase_rules(
     assert "Toronto conditions" in sms.calls[0]["MessageBody"]
 
 
-def test_collingwood_named_location_reaches_provider_backed_weather_path(
+def test_bug_0001_collingwood_named_location_reaches_provider_backed_weather_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bedrock = FakeBedrockClient(
@@ -860,7 +860,7 @@ def test_collingwood_named_location_reaches_provider_backed_weather_path(
     assert sms.calls[0]["MessageBody"] == "Collingwood conditions are mild tonight."
 
 
-def test_interpreter_prompt_sets_canada_ontario_named_place_defaults() -> None:
+def test_bug_0001_interpreter_prompt_sets_canada_ontario_named_place_defaults() -> None:
     prompt = handler.EXTRACTION_SYSTEM_PROMPT.casefold()
 
     assert "assume canada" in prompt
@@ -871,7 +871,7 @@ def test_interpreter_prompt_sets_canada_ontario_named_place_defaults() -> None:
     assert "time_window 'evening'" in prompt
 
 
-def test_current_grounded_location_can_fill_omitted_redundant_field(
+def test_bug_0001_current_grounded_location_can_fill_omitted_redundant_field(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     interpretation = '{"intent":"weather","location_text":"Collingwood","current_location_text":"","coordinates":null,"time_window":"evening","activity":"general","location_source":"current"}'

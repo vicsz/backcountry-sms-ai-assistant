@@ -13,6 +13,12 @@ failing, or regressed behavior starts from
 [`bug-fixing-workflow.md`](bug-fixing-workflow.md), which requires a tracked bug record and an
 automated regression test before commit.
 
+Use [`docs/environments.md`](docs/environments.md) as the source of truth for environment names.
+Only call a target “production” when it is actually deployed for real traffic; a production CDK
+configuration or future spec is not a production deployment. “Live verification” means explicit
+verification against the deployed target for the change, which is currently the demo capture
+stack.
+
 This separation is intentional for both maintainability and demonstration: specs show how planned
 capability is delivered, while bug records show evidence-led diagnosis, corrective change, and
 proof that a known failure does not return. The project-local
@@ -169,7 +175,8 @@ Live checks are opt-in and depend on the change:
 - Documentation-only changes: no live check.
 - Offline test/eval changes: no SMS check.
 - Provider, Bedrock, Lambda, SNS, or SMS behavior changes: perform the smallest relevant live
-  check after review.
+  check after review against the applicable deployed environment. Record the environment, stack,
+  delivery mode, external calls, and result in the relevant bug or spec record.
 - Use the approved SSO profile and region. Never use credentials copied into the repository.
 - Use public test inputs and avoid production or personal message content where possible.
 - Inspect redacted logs/metrics/traces when the spec requires operational verification.

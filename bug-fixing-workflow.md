@@ -8,6 +8,10 @@ that expectation.
 The project-local `.codex/skills/bug-fixing-workflow/SKILL.md` helps route matching requests into
 this workflow automatically. The repository instructions and this document remain authoritative.
 
+Use the environment definitions in [`docs/environments.md`](docs/environments.md). “Live
+verification” means a check against the deployed target relevant to this project; it does not
+automatically mean production. For the current project, that target is the demo capture stack.
+
 ## Intake and tracking
 
 1. Search `bugs/INDEX.md` and the files under `bugs/` for an existing matching bug.
@@ -29,8 +33,14 @@ bug file and `bugs/INDEX.md` are created or updated explicitly and reviewed like
    root cause and its confidence.
 4. Define the smallest fix and explicit non-goals before changing code or configuration.
 5. Add an automated regression test that would fail for the reported defect and passes after the
-   fix. Do not rely only on a manual reproduction.
-6. Use the existing `Backcountry Implementer` and `Backcountry Reviewer` roles when delegation is
+   fix. Do not rely only on a manual reproduction. Name the test with the bug ID (for example,
+   `test_bug_0001_collingwood_named_location_reaches_weather_path`) and list each exact
+   `path::test_name` reference in the bug record. If the test cannot be renamed, add a
+   `Regression: BUG-####` docstring or comment.
+6. If a model or provider behavior needs broader coverage, add a separately identified eval case
+   such as `BUG-0001-COLLINGWOOD-001` and link it from the bug record. Do not treat an eval case as
+   a replacement for a deterministic regression test when a unit test is feasible.
+7. Use the existing `Backcountry Implementer` and `Backcountry Reviewer` roles when delegation is
    used. The implementer does not deploy, send SMS, or commit; the reviewer is read-only.
 
 ## Verification and closure
@@ -39,8 +49,11 @@ Run focused checks while iterating. After review and the final focused fix, run 
 final validation gate from `development-workflow.md` exactly once.
 
 Provider, Bedrock, Lambda, SNS, SMS, or other deployed-runtime defects require the smallest
-explicit live check after review. Keep live evidence separate from local test evidence; never hide
-live calls, deployments, or SMS sends in ordinary tests or hooks.
+explicit live check against the applicable deployed environment after review. Record the target
+environment, stack/deployment identifier, delivery mode, external calls made, and result. Keep live
+evidence separate from local test evidence; never hide live calls, deployments, or SMS sends in
+ordinary tests or hooks. If no production target exists, do not leave a bug awaiting production
+verification; use the deployed demo target and state that production is not deployed.
 
 Before commit, update the bug record and register with the cause, fix, regression tests, validation
 results, and current live-verification state. Record the commit after it exists.

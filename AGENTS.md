@@ -32,6 +32,9 @@ publication planning.
   [`docs/performance.md`](docs/performance.md).
 - Do not treat a local implementation, offline test, or proposed architecture as deployed or
   live-verified.
+- Use [`docs/environments.md`](docs/environments.md) for environment terminology. The current
+  demo capture stack is the only deployed target; do not describe a configuration or future target
+  as production deployment.
 - Preserve authoritative deterministic data boundaries. Do not allow an LLM to invent current
   weather, fire-ban status, closures, coordinates, provider results, or other operational facts.
 - Keep SMS length, bounded context, retry limits, privacy, and safe fallback behavior explicit.

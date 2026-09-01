@@ -38,7 +38,14 @@ Describe the smallest implemented change and any explicit non-goals.
 
 ## Regression tests
 
-List automated tests added or updated, including the behavior they protect.
+List automated tests added or updated, including the behavior they protect. Every regression test
+must link to this bug ID through its test name (for example, `test_bug_0001_<behavior>`) or a
+`Regression: BUG-####` docstring/comment. Use exact references:
+
+- `tests/test_file.py::test_bug_####_<behavior>` — behavior protected
+
+Optional model/provider eval cases should use a related case ID such as
+`BUG-####-SHORT-NAME-001` and be listed separately from deterministic unit tests.
 
 ## Validation results
 
@@ -47,8 +54,9 @@ Record focused checks and the final validation gate, with dates or commands wher
 ## Deployment/live-verification status
 
 State whether deployment or live verification is required. Record evidence separately from local
-test results. Use `Awaiting Live Verification` when the local fix is complete but required live
-evidence is outstanding.
+test results. Identify the target environment, stack/deployment identifier, delivery mode, external
+calls, and result. Use `Awaiting Live Verification` only when the applicable deployed target has
+not yet been verified; do not assume that target is production.
 
 ## Fixing commit
 

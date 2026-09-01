@@ -48,3 +48,9 @@ tests or hooks.
 
 Defer to repository-specific review, validation, privacy, deployment, and commit instructions. The
 skill does not authorize commits, pushes, deployments, or external communication.
+
+When the repository defines environment targets, use its terminology for live verification. Do not
+assume that “live” means production or that a configured production target is deployed. Regression
+tests should include the bug ID in the test name or a `Regression: BUG-####` docstring/comment, and
+the bug record should list exact `path::test_name` references. Broader model/provider eval cases
+should use a related bug-linked case ID and remain distinct from deterministic unit tests.
