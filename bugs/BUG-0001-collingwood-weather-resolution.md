@@ -106,4 +106,5 @@ until the production rollout and its separately authorized verification are comp
 
 ## Fixing commit
 
-`5ba8fa3 Improve Ontario named-place resolution` plus the follow-up BUG-0001 correction commit.
+`d951ff1 BUG-0001 -- harden Collingwood weather resolution` (supersedes the initial partial fix in
+`5ba8fa3`).

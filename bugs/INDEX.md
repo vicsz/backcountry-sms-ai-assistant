@@ -9,4 +9,4 @@ Statuses are `Open`, `Investigating`, `Fixed Locally`, `Awaiting Live Verificati
 | ID | Title | Status | Cause | Fix | Tests | Commit | Live verification |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
-| BUG-0001 | Collingwood weather request was rejected | Awaiting Live Verification | Nova Micro omitted the redundant current-location field; strict validation rejected the grounded place | Canonicalized the grounded current place, clarified prompt, and strengthened Ontario ranking | Collingwood path, omitted-field, prompt, and Ontario preference regressions | Pending (`BUG-0001 -- ...`) | Test capture passed; production rollout pending |
+| BUG-0001 | Collingwood weather request was rejected | Awaiting Live Verification | Nova Micro omitted the redundant current-location field; strict validation rejected the grounded place | Canonicalized the grounded current place, clarified prompt, and strengthened Ontario ranking | Collingwood path, omitted-field, prompt, and Ontario preference regressions | [d951ff1](https://github.com/vicsz/backcountry-sms-ai-assistant/commit/d951ff1) | Test capture passed; production rollout pending |
