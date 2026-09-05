@@ -48,8 +48,11 @@ class BackcountrySmsAssistantStack(Stack):
 
         rust_candidate_enabled = context_flag("rust_candidate")
         python_capture_enabled = context_flag("python_capture")
-        if (rust_candidate_enabled or python_capture_enabled) and not is_test_stack:
-            raise ValueError("candidate capture targets are restricted to BackcountrySmsEchoTest")
+        rust_runtime_enabled = context_flag("rust_runtime")
+        if (rust_candidate_enabled or python_capture_enabled or rust_runtime_enabled) and not is_test_stack:
+            raise ValueError("candidate capture and runtime targets are restricted to BackcountrySmsEchoTest")
+        if rust_candidate_enabled and rust_runtime_enabled:
+            raise ValueError("rust_candidate and rust_runtime cannot be enabled together")
         Tags.of(self).add("Project", "backcountry-sms-ai-assistant")
         Tags.of(self).add("Stage", "5-message-context")
         Tags.of(self).add("ManagedBy", "aws-cdk")
@@ -179,7 +182,7 @@ class BackcountrySmsAssistantStack(Stack):
             time_to_live_attribute="ttl",
         )
         rust_context = None
-        if rust_candidate_enabled:
+        if rust_candidate_enabled or rust_runtime_enabled:
             rust_context = dynamodb.Table(
                 self,
                 "RustCandidateMessageContext",
@@ -426,17 +429,18 @@ class BackcountrySmsAssistantStack(Stack):
                 description="Direct-invocation Python capture twin; not subscribed to inbound SNS.",
             )
         rust_function = None
-        if rust_candidate_enabled:
+        rust_log_group = None
+        if rust_candidate_enabled or rust_runtime_enabled:
             assert rust_context is not None
             rust_log_group = logs.LogGroup(
                 self,
-                "RustCandidateFunctionLogGroup",
+                "RustRuntimeFunctionLogGroup" if rust_runtime_enabled else "RustCandidateFunctionLogGroup",
                 retention=logs.RetentionDays.TWO_WEEKS,
                 removal_policy=RemovalPolicy.RETAIN,
             )
             rust_function = lambda_.Function(
                 self,
-                "RustCandidateFunction",
+                "RustRuntimeFunction" if rust_runtime_enabled else "RustCandidateFunction",
                 runtime=lambda_.Runtime.PROVIDED_AL2023,
                 handler="bootstrap",
                 code=lambda_.Code.from_asset("rust/dist"),
@@ -449,22 +453,28 @@ class BackcountrySmsAssistantStack(Stack):
                     "ORIGINATION_IDENTITY": origination_identity.value_as_string,
                     "BEDROCK_MODEL_ID": bedrock_model_id.value_as_string,
                     "MESSAGE_CONTEXT_TABLE": rust_context.table_name,
-                    "DEPLOYMENT_ENVIRONMENT": "test",
-                    "TEST_MODE": "true",
-                    "SMS_DELIVERY_MODE": "capture",
+                    "DEPLOYMENT_ENVIRONMENT": "test" if rust_candidate_enabled else deployment_environment.value_as_string,
+                    "TEST_MODE": "true" if rust_candidate_enabled else test_mode.value_as_string,
+                    "SMS_DELIVERY_MODE": "capture" if rust_candidate_enabled else sms_delivery_mode.value_as_string,
                     "RAG_KNOWLEDGE_BASE_ID": parks_knowledge_base.attr_knowledge_base_id,
                 },
                 log_group=rust_log_group,
             )
             CfnOutput(
                 self,
-                "RustCandidateFunctionName",
+                "RustRuntimeFunctionName" if rust_runtime_enabled else "RustCandidateFunctionName",
                 value=rust_function.function_name,
-                description="Direct-invocation Rust candidate; not subscribed to inbound SNS.",
+                description=(
+                    "Rust runtime primary subscribed to inbound SNS."
+                    if rust_runtime_enabled
+                    else "Direct-invocation Rust candidate; not subscribed to inbound SNS."
+                ),
             )
-        inbound_messages.add_subscription(
-            subscriptions.LambdaSubscription(echo_function)
-        )
+        request_function = rust_function if rust_runtime_enabled else echo_function
+        assert request_function is not None
+        request_log_group = rust_log_group if rust_runtime_enabled else log_group
+        assert request_log_group is not None
+        inbound_messages.add_subscription(subscriptions.LambdaSubscription(request_function))
         echo_function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["sms-voice:SendTextMessage"],
@@ -488,7 +498,7 @@ class BackcountrySmsAssistantStack(Stack):
         error_alarm = cloudwatch.Alarm(
             self,
             "LambdaErrorsAlarm",
-            metric=echo_function.metric_errors(period=Duration.minutes(5), statistic="Sum"),
+            metric=request_function.metric_errors(period=Duration.minutes(5), statistic="Sum"),
             threshold=1,
             evaluation_periods=1,
             treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
@@ -497,7 +507,7 @@ class BackcountrySmsAssistantStack(Stack):
         throttle_alarm = cloudwatch.Alarm(
             self,
             "LambdaThrottlesAlarm",
-            metric=echo_function.metric_throttles(period=Duration.minutes(5), statistic="Sum"),
+            metric=request_function.metric_throttles(period=Duration.minutes(5), statistic="Sum"),
             threshold=1,
             evaluation_periods=1,
             treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
@@ -554,7 +564,7 @@ class BackcountrySmsAssistantStack(Stack):
             cloudwatch.SingleValueWidget(
                 title="Errors, warnings, fallbacks",
                 metrics=[
-                    echo_function.metric_errors(statistic="Sum", label="Lambda errors"),
+                    request_function.metric_errors(statistic="Sum", label="Lambda errors"),
                     app_metric("FallbackReplies", label="Fallback replies"),
                     app_metric("SmsSendFailures", label="SMS failures"),
                 ],
@@ -573,7 +583,7 @@ class BackcountrySmsAssistantStack(Stack):
             ),
             cloudwatch.LogQueryWidget(
                 title="Recent errors and warnings",
-                log_group_names=[log_group.log_group_name],
+                log_group_names=[request_log_group.log_group_name],
                 query_string=(
                     "fields @timestamp, @message\n"
                     "| filter @message like /(?i)(error|warn|failed|failure|fallback|rejected)/\n"
@@ -595,8 +605,8 @@ class BackcountrySmsAssistantStack(Stack):
                     app_metric("RetrievalFailures", label="Guide failures"),
                 ],
                 right=[
-                    echo_function.metric_errors(statistic="Sum", label="Lambda errors"),
-                    echo_function.metric_throttles(statistic="Sum", label="Lambda throttles"),
+                    request_function.metric_errors(statistic="Sum", label="Lambda errors"),
+                    request_function.metric_throttles(statistic="Sum", label="Lambda throttles"),
                 ],
                 width=12,
                 height=6,
@@ -704,6 +714,13 @@ class BackcountrySmsAssistantStack(Stack):
                     resources=["*"],
                 )
             )
+            if rust_runtime_enabled:
+                rust_function.add_to_role_policy(
+                    iam.PolicyStatement(
+                        actions=["sms-voice:SendTextMessage"],
+                        resources=["*"],
+                    )
+                )
         lite_model_policy = iam.Policy(
             self,
             "LiteModelPolicy",

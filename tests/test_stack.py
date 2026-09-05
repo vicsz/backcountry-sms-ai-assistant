@@ -214,6 +214,38 @@ def test_candidate_capture_targets_are_restricted_to_demo_stack() -> None:
             BackcountrySmsAssistantStack(app, "BackcountrySmsEcho")
 
 
+def test_rust_runtime_switches_primary_subscription_and_preserves_python_rollback() -> None:
+    app = cdk.App(context={"rust_runtime": True})
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+
+    functions = template.find_resources("AWS::Lambda::Function")
+    python_functions = [
+        resource for resource in functions.values()
+        if resource["Properties"].get("Handler") == "backcountry_sms.handler.lambda_handler"
+    ]
+    rust_functions = [
+        resource for resource in functions.values()
+        if resource["Properties"].get("Runtime") == "provided.al2023"
+    ]
+    assert len(python_functions) == 1
+    assert len(rust_functions) == 1
+    rust = rust_functions[0]["Properties"]
+    assert rust["Handler"] == "bootstrap"
+    assert rust["Environment"]["Variables"]["DEPLOYMENT_ENVIRONMENT"] == {"Ref": "DeploymentEnvironment"}
+    assert rust["Environment"]["Variables"]["TEST_MODE"] == {"Ref": "TestMode"}
+    assert rust["Environment"]["Variables"]["SMS_DELIVERY_MODE"] == {"Ref": "SmsDeliveryMode"}
+
+    subscriptions = template.find_resources("AWS::SNS::Subscription")
+    inbound = [resource for resource in subscriptions.values() if "RustRuntimeFunction" in json.dumps(resource)]
+    assert len(inbound) == 1
+    policies = template.find_resources("AWS::IAM::Policy")
+    rust_policy_text = " ".join(
+        json.dumps(resource) for resource in policies.values()
+        if "RustRuntimeFunctionServiceRole" in json.dumps(resource)
+    )
+    assert "sms-voice:SendTextMessage" in rust_policy_text
+
+
 def test_dashboard_is_single_demo_dashboard_for_every_stack() -> None:
     production_app = cdk.App()
     production_template = Template.from_stack(
