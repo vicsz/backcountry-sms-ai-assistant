@@ -1,4 +1,4 @@
-"""Measure local adapter overhead only; this script never calls AWS."""
+"""Run the reproducible offline Stage 9.3.3 evaluation; this script never calls AWS."""
 
 from __future__ import annotations
 
@@ -8,17 +8,20 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from backcountry_sms.retrieval import LocalRetriever, RetrievalCitation, RetrievalResult
 
+def run() -> None:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from backcountry_sms.retrieval import (
+        LocalRetriever,
+        RetrievalCitation,
+        RetrievalResult,
+    )
+    from scripts.retrieval_eval import evaluate, main
 
-def percentile(samples: list[float], value: float) -> float:
-    ordered = sorted(samples)
-    index = max(0, min(len(ordered) - 1, round((len(ordered) - 1) * value)))
-    return ordered[index]
+    if "--demo" in sys.argv:
+        main()
+        return
 
-
-def main() -> None:
     retriever = LocalRetriever([
         RetrievalResult(
             excerpt="Arrowhead lists canoe rentals and a boat launch.",
@@ -31,15 +34,19 @@ def main() -> None:
         started = time.perf_counter()
         retriever.retrieve("What facilities are listed for Arrowhead?")
         samples.append((time.perf_counter() - started) * 1000)
-    print(json.dumps({
+    ordered = sorted(samples)
+    index = min(len(ordered) - 1, round((len(ordered) - 1) * 0.95))
+    report = evaluate()
+    report.update({
         "scope": "local_typed_retrieval_adapter_only",
         "samples": len(samples),
         "p50_ms": round(statistics.median(samples), 4),
-        "p95_ms": round(percentile(samples, 0.95), 4),
+        "p95_ms": round(ordered[index], 4),
         "telemetry_fields": ["event", "outcome", "duration_ms", "provider", "RetrievalCalls", "RetrievalDurationMs", "RetrievalFailures"],
         "cloud_latency_measured": False,
-    }, separators=(",", ":")))
+    })
+    print(json.dumps(report, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
-    main()
+    run()

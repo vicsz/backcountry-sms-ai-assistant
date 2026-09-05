@@ -4,6 +4,20 @@ This is the single append-only record for the Stage 6.3 baseline and optimizatio
 Timing values are rounded, bounded operational data. No SMS bodies, prompts, model responses,
 phone numbers, account identifiers, credentials, or precise user-linked coordinates are retained.
 
+## Stage 9.3.3 — offline retrieval evaluation capability
+
+Date: 2026-09-05
+
+The repository now contains a deterministic lexical-overlap harness over the checked-in Ontario
+Parks guide. It compares fixed 200/20, 300/30, 500/50, and heading-aware chunks at top-k 1, 3,
+and 5. The report records corpus hash, candidate ordering, per-case evidence IDs/scores,
+independent citation/grounding/refusal rubric results, and current-status routing. The output is
+redacted: it retains no raw questions, excerpts, model responses, or provider payloads.
+
+This is an offline retrieval baseline only; its ordering and timings must not be read as Bedrock
+embedding, Knowledge Base, generation, or provider-latency measurements. No candidate is approved
+for deployment. Live retrieval and any ingestion/deployment decision remain separately authorized.
+
 ## Baseline — deployed unoptimized workflow
 
 Date: 2026-08-30

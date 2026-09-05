@@ -1,6 +1,6 @@
 # Stage 9.3.3 — Knowledge Base retrieval and chunking tuning
 
-Status: Proposed
+Status: Partially implemented — offline evaluation capability
 
 ## Objective
 
@@ -186,6 +186,22 @@ one-time ingestion authorization in a later implementation stage.
 Otherwise recommend retaining the Stage 9.3.2 baseline or rejecting the experiment as
 inconclusive. This spec authorizes evaluation design and reporting only; it does not authorize
 corpus refresh, ingestion automation, deployment, or live SMS.
+
+## Implementation record — offline capability
+
+Date: 2026-09-05
+
+Implemented `scripts/retrieval_eval.py` and `tests/evals/fixtures/retrieval_golden.json` as a
+deterministic lexical retrieval baseline over the checked-in corpus. The runner covers the four
+bounded chunking variants, top-k 1/3/5, the reviewed park/rental/negative/current-status cases,
+independent deterministic generation/citation scoring, preregistered thresholds, corpus hashing,
+and redacted JSON output. `scripts/benchmark_rag_retrieval.py --demo` provides a local query-to-
+evidence/source-metadata demonstration. Current-status cases are routed to a labeled live-status
+boundary in the evaluation and never invoke retrieval.
+
+This does not establish Bedrock/Titan ranking, provider latency, generation quality, or a rollout
+recommendation. The Stage 9.3.2 deployed baseline remains unchanged pending any separately
+authorized live retrieval evaluation and later deployment decision.
 
 ## Acceptance criteria
 

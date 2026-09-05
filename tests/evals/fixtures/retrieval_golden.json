@@ -1,0 +1,17 @@
+{
+  "fixture_version": "stage-9.3.3-v1",
+  "cases": [
+    {"case_id": "algonquin.guide.001", "question": "What should I know before visiting Algonquin based on the guide?", "class": "supported", "gold_evidence": ["algonquin.activities", "algonquin.facilities"], "acceptable_claims": ["canoeing", "backcountry camping"], "required_citation": {"park": "Algonquin Provincial Park", "sections": ["Activities", "Facilities"]}},
+    {"case_id": "killarney.camping.001", "question": "Does Killarney have backcountry camping?", "class": "supported", "gold_evidence": ["killarney.activities", "killarney.facilities"], "acceptable_claims": ["backcountry camping"], "required_citation": {"park": "Killarney Provincial Park", "sections": ["Activities", "Facilities"]}},
+    {"case_id": "arrowhead.facilities.001", "question": "What facilities are listed for Arrowhead?", "class": "supported", "gold_evidence": ["arrowhead.facilities"], "acceptable_claims": ["boat launch", "canoe rentals"], "required_citation": {"park": "Arrowhead Provincial Park", "sections": ["Facilities"]}},
+    {"case_id": "canoeing.multi.001", "question": "Which Ontario parks mention canoeing and boat launches?", "class": "supported", "gold_evidence": ["algonquin.activities", "algonquin.facilities", "arrowhead.activities", "arrowhead.facilities", "killarney.activities", "killarney.facilities"], "acceptable_claims": ["canoeing", "boat launch"], "required_citation": {"park": "Ontario provincial parks", "sections": ["Activities", "Facilities"]}},
+    {"case_id": "rentals.canoe.001", "question": "Where can I rent a canoe?", "class": "supported", "gold_evidence": ["algonquin.facilities", "arrowhead.facilities"], "acceptable_claims": ["canoe rentals"], "required_citation": {"park": "Ontario provincial parks", "sections": ["Facilities"]}},
+    {"case_id": "portage-store.001", "question": "What are the hours and prices at the Portage Store?", "class": "negative", "gold_evidence": [], "acceptable_claims": [], "required_citation": {"park": "", "sections": []}},
+    {"case_id": "negative-park.001", "question": "Does NeverListed Park have winter camping?", "class": "negative", "gold_evidence": [], "acceptable_claims": [], "required_citation": {"park": "", "sections": []}},
+    {"case_id": "fire-ban.001", "question": "Is Algonquin under a fire ban today?", "class": "current-status", "gold_evidence": [], "acceptable_claims": [], "required_citation": {"park": "", "sections": []}},
+    {"case_id": "operations.001", "question": "Is the park open tomorrow and are sites available?", "class": "current-status", "gold_evidence": [], "acceptable_claims": [], "required_citation": {"park": "", "sections": []}},
+    {"case_id": "algonquin.guide.paraphrase.001", "question": "What can visitors do at Algonquin according to the guide?", "class": "supported", "gold_evidence": ["algonquin.activities"], "acceptable_claims": ["canoeing"], "required_citation": {"park": "Algonquin Provincial Park", "sections": ["Activities"]}},
+    {"case_id": "portage-store.paraphrase.001", "question": "Does this guide publish current Portage Store opening hours?", "class": "negative", "gold_evidence": [], "acceptable_claims": [], "required_citation": {"park": "", "sections": []}},
+    {"case_id": "operations.paraphrase.001", "question": "Can I reserve an Algonquin campsite this weekend?", "class": "current-status", "gold_evidence": [], "acceptable_claims": [], "required_citation": {"park": "", "sections": []}}
+  ]
+}

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from botocore.exceptions import ReadTimeoutError
@@ -12,6 +14,14 @@ from backcountry_sms.retrieval import (
     RetrievalCitation,
     RetrievalFailure,
     RetrievalResult,
+)
+from scripts.retrieval_eval import (
+    GOLDEN,
+    VARIANTS,
+    build_chunks,
+    current_status,
+    evaluate,
+    retrieve,
 )
 
 
@@ -125,3 +135,41 @@ def test_bedrock_retriever_derives_park_from_mid_line_chunk_heading() -> None:
 
     assert result.citation.park_name == "Algonquin Provincial Park"
     assert result.citation.source_url == "https://www.ontarioparks.ca/park/algonquin"
+
+
+def test_stage_9_3_3_fixture_covers_required_boundaries() -> None:
+    cases = json.loads(GOLDEN.read_text())["cases"]
+    questions = " ".join(case["question"] for case in cases).casefold()
+    assert all(term in questions for term in ("algonquin", "killarney", "arrowhead", "canoe", "portage store", "neverlisted", "fire ban"))
+    assert {case["class"] for case in cases} == {"supported", "negative", "current-status"}
+
+
+def test_offline_retrieval_distinguishes_rentals_from_boat_launch() -> None:
+    chunks = build_chunks("heading-aware", 500, 0)
+    rentals = retrieve("Where can I rent a canoe at Arrowhead?", chunks, 5)
+    arrowhead = [hit for hit in rentals if hit.park == "Arrowhead Provincial Park"]
+    assert arrowhead and "arrowhead.facilities" in arrowhead[0].evidence
+    assert {"rentals", "canoe"} <= set(arrowhead[0].text_terms)
+
+
+def test_offline_current_status_boundary_never_retrieves() -> None:
+    assert current_status("Is Algonquin under a fire ban today?")
+    report = evaluate()
+    current = next(item for item in report["candidates"] if item["variant"] == "fixed-300-30" and item["top_k"] == 3)
+    assert current["current_status_routing"] == 1.0
+    assert all(item.get("retriever_called") is False for item in current["cases"] if item["class"] == "current-status")
+
+
+def test_offline_report_is_redacted_and_reproducible() -> None:
+    report = evaluate()
+    encoded = json.dumps(report, sort_keys=True)
+    assert "What should I know" not in encoded
+    assert "raw" not in encoded.casefold()
+    assert len(report["candidates"]) == len(VARIANTS) * 3
+    assert report["thresholds_preregistered"]["unsupported_claim_rate"] == 0.0
+
+
+def test_local_demo_is_available_without_network() -> None:
+    completed = subprocess.run([sys.executable, "scripts/benchmark_rag_retrieval.py", "--demo"], check=True, capture_output=True, text=True)
+    assert '"query"' in completed.stdout
+    assert "arrowhead.facilities" in completed.stdout
