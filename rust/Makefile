@@ -1,5 +1,6 @@
 TARGET ?= x86_64-unknown-linux-gnu
 PROFILE ?= release
+BUILD_CMD ?= cargo build
 ARTIFACT := target/$(TARGET)/$(PROFILE)/bootstrap
 PACKAGE_DIR := dist
 ARCHIVE_DIR := target/package
@@ -20,7 +21,7 @@ clippy:
 	cargo clippy --locked --all-targets --all-features -- -D warnings
 
 build:
-	cargo build --locked --release --target $(TARGET)
+	$(BUILD_CMD) --locked --release --target $(TARGET)
 
 package: build
 	install -d $(PACKAGE_DIR)

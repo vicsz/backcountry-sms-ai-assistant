@@ -42,9 +42,14 @@ class BackcountrySmsAssistantStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs: Any) -> None:
         super().__init__(scope, construct_id, **kwargs)
         is_test_stack = construct_id == "BackcountrySmsEchoTest"
-        rust_candidate_enabled = self.node.try_get_context("rust_candidate") is True
-        if rust_candidate_enabled and not is_test_stack:
-            raise ValueError("rust_candidate is restricted to BackcountrySmsEchoTest")
+        def context_flag(name: str) -> bool:
+            value = self.node.try_get_context(name)
+            return value is True or (isinstance(value, str) and value.lower() == "true")
+
+        rust_candidate_enabled = context_flag("rust_candidate")
+        python_capture_enabled = context_flag("python_capture")
+        if (rust_candidate_enabled or python_capture_enabled) and not is_test_stack:
+            raise ValueError("candidate capture targets are restricted to BackcountrySmsEchoTest")
         Tags.of(self).add("Project", "backcountry-sms-ai-assistant")
         Tags.of(self).add("Stage", "5-message-context")
         Tags.of(self).add("ManagedBy", "aws-cdk")
@@ -178,6 +183,18 @@ class BackcountrySmsAssistantStack(Stack):
             rust_context = dynamodb.Table(
                 self,
                 "RustCandidateMessageContext",
+                partition_key=dynamodb.Attribute(name="user_phone_e164", type=dynamodb.AttributeType.STRING),
+                sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
+                billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+                encryption=dynamodb.TableEncryption.AWS_MANAGED,
+                time_to_live_attribute="ttl",
+                removal_policy=RemovalPolicy.RETAIN,
+            )
+        python_capture_context = None
+        if python_capture_enabled:
+            python_capture_context = dynamodb.Table(
+                self,
+                "PythonCaptureMessageContext",
                 partition_key=dynamodb.Attribute(name="user_phone_e164", type=dynamodb.AttributeType.STRING),
                 sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
                 billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -352,6 +369,62 @@ class BackcountrySmsAssistantStack(Stack):
             },
             log_group=log_group,
         )
+        python_capture_function = None
+        if python_capture_enabled:
+            assert python_capture_context is not None
+            python_capture_log_group = logs.LogGroup(
+                self,
+                "PythonCaptureFunctionLogGroup",
+                retention=logs.RetentionDays.TWO_WEEKS,
+                removal_policy=RemovalPolicy.RETAIN,
+            )
+            python_capture_function = lambda_.Function(
+                self,
+                "PythonCaptureFunction",
+                runtime=lambda_.Runtime.PYTHON_3_12,
+                handler="backcountry_sms.handler.lambda_handler",
+                code=lambda_.Code.from_asset(
+                    ".",
+                    exclude=[
+                        ".git",
+                        ".venv",
+                        "cdk.out",
+                        ".mypy_cache",
+                        ".pytest_cache",
+                        ".ruff_cache",
+                        "rust/target",
+                        "rust/dist",
+                        "tests",
+                        "local",
+                    ],
+                ),
+                timeout=Duration.seconds(25),
+                memory_size=128,
+                tracing=lambda_.Tracing.ACTIVE,
+                adot_instrumentation=lambda_.AdotInstrumentationConfig(
+                    layer_version=lambda_.AdotLayerVersion.from_python_sdk_layer_version(
+                        lambda_.AdotLambdaLayerPythonSdkVersion.LATEST
+                    ),
+                    exec_wrapper=lambda_.AdotLambdaExecWrapper.INSTRUMENT_HANDLER,
+                ),
+                environment={
+                    "ALLOWED_PHONE_NUMBER": allowed_phone_number.value_as_string,
+                    "ORIGINATION_IDENTITY": origination_identity.value_as_string,
+                    "BEDROCK_MODEL_ID": bedrock_model_id.value_as_string,
+                    "MESSAGE_CONTEXT_TABLE": python_capture_context.table_name,
+                    "DEPLOYMENT_ENVIRONMENT": "test",
+                    "TEST_MODE": "true",
+                    "SMS_DELIVERY_MODE": "capture",
+                    "RAG_KNOWLEDGE_BASE_ID": parks_knowledge_base.attr_knowledge_base_id,
+                },
+                log_group=python_capture_log_group,
+            )
+            CfnOutput(
+                self,
+                "PythonCaptureFunctionName",
+                value=python_capture_function.function_name,
+                description="Direct-invocation Python capture twin; not subscribed to inbound SNS.",
+            )
         rust_function = None
         if rust_candidate_enabled:
             assert rust_context is not None
@@ -573,6 +646,35 @@ class BackcountrySmsAssistantStack(Stack):
         echo_role = echo_function.role
         assert echo_role is not None
         runtime_roles = [echo_role]
+        if python_capture_function is not None:
+            assert python_capture_context is not None
+            python_capture_role = python_capture_function.role
+            assert python_capture_role is not None
+            runtime_roles.append(python_capture_role)
+            python_capture_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["bedrock:Retrieve"],
+                    resources=[parks_knowledge_base.attr_knowledge_base_arn],
+                )
+            )
+            python_capture_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["dynamodb:PutItem", "dynamodb:Query"],
+                    resources=[python_capture_context.table_arn],
+                )
+            )
+            python_capture_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["geo-places:SearchText"],
+                    resources=["*"],
+                )
+            )
+            python_capture_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
+                    resources=["*"],
+                )
+            )
         if rust_function is not None:
             assert rust_context is not None
             rust_role = rust_function.role

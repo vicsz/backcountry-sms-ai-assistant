@@ -22,6 +22,7 @@ aws-sdk-dynamodb = "1.124"
 aws-sdk-geoplaces = "1.64"
 aws-sdk-pinpointsmsvoicev2 = "1.121"
 aws-smithy-types = "1.6"
+xray-lite = "0.0.9"
 lambda_runtime = "0.13"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 regex = "1"

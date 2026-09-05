@@ -37,7 +37,9 @@ make package
 The Lambda package target is `x86_64-unknown-linux-gnu`, matching the existing CDK default
 architecture. `rust-toolchain.toml` pins the compiler and target. `make package` creates the
 reproducible locked release package at `target/package/backcountry-rust-runtime.zip` and the CDK candidate
-asset at `dist/bootstrap`; the local macOS build may require a Linux cross-linker such as Zig.
+asset at `dist/bootstrap`. On Apple Silicon, a Linux cross-linker such as Zig may be required;
+the package can be built with `BUILD_CMD='cargo zigbuild' make package` when
+`cargo-zigbuild` is installed.
 
 The Python CDK remains the active deployment path. Setting the CDK context
 `rust_candidate=true` adds an isolated `provided.al2023` candidate function to the Demo test stack;

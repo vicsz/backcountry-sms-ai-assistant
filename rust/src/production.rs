@@ -29,6 +29,7 @@ use reqwest::blocking::Client as HttpClient;
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, env, future::Future, time::Duration};
 use tokio::{runtime::Runtime, sync::OnceCell, task};
+use xray_lite::{Context, CustomNamespace, DaemonClient, SubsegmentContext};
 
 const MAX_RETRIEVAL_RESULTS: usize = 3;
 const MIN_RETRIEVAL_SCORE: f64 = 0.4;
@@ -1039,13 +1040,29 @@ impl SmsSender for EndUserMessaging {
     }
 }
 
-#[derive(Default)]
 struct JsonTelemetry {
     counts: BTreeMap<String, usize>,
+    xray: Option<SubsegmentContext<DaemonClient>>,
+}
+
+impl Default for JsonTelemetry {
+    fn default() -> Self {
+        let xray = DaemonClient::from_lambda_env()
+            .ok()
+            .and_then(|client| SubsegmentContext::from_lambda_env(client).ok());
+        Self {
+            counts: BTreeMap::new(),
+            xray,
+        }
+    }
 }
 
 impl TelemetrySink for JsonTelemetry {
     fn emit(&mut self, event: TelemetryEvent) {
+        if let Some(context) = &self.xray {
+            let operation = event.outcome.as_deref().unwrap_or(event.event.as_str());
+            let _subsegment = context.enter_subsegment(CustomNamespace::new(operation));
+        }
         if event.event == "adapter_call" {
             if let Some(outcome) = &event.outcome {
                 *self.counts.entry(outcome.clone()).or_insert(0) += 1;

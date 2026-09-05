@@ -1,6 +1,7 @@
 import json
 
 import aws_cdk as cdk
+import pytest
 from aws_cdk.assertions import Match, Template
 
 from backcountry_sms.models import DEFAULT_MODEL_ID, NOVA_MICRO_MODEL_ID
@@ -170,6 +171,47 @@ def test_rust_candidate_is_opt_in_and_not_subscribed_to_inbound_sns() -> None:
     subscriptions = template.find_resources("AWS::SNS::Subscription")
     candidate_text = json.dumps(subscriptions)
     assert "RustCandidateFunction" not in candidate_text
+
+
+def test_python_capture_twin_is_opt_in_isolated_and_non_delivery() -> None:
+    app = cdk.App(context={"python_capture": "true"})
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+
+    functions = template.find_resources("AWS::Lambda::Function")
+    python_functions = [
+        resource for resource in functions.values()
+        if resource["Properties"].get("Handler") == "backcountry_sms.handler.lambda_handler"
+    ]
+    assert len(python_functions) == 2
+    capture = next(
+        resource for resource in python_functions
+        if resource["Properties"]["Environment"]["Variables"]["DEPLOYMENT_ENVIRONMENT"] == "test"
+    )
+    capture_properties = capture["Properties"]
+    assert capture_properties["Runtime"] == "python3.12"
+    assert capture_properties["MemorySize"] == 128
+    assert capture_properties["Timeout"] == 25
+    assert capture_properties["Environment"]["Variables"]["TEST_MODE"] == "true"
+    assert capture_properties["Environment"]["Variables"]["SMS_DELIVERY_MODE"] == "capture"
+
+    subscriptions = json.dumps(template.find_resources("AWS::SNS::Subscription"))
+    assert "PythonCaptureFunction" not in subscriptions
+
+    policies = template.find_resources("AWS::IAM::Policy")
+    capture_policies = [
+        json.dumps(resource) for resource in policies.values()
+        if "PythonCaptureFunctionServiceRole" in json.dumps(resource)
+    ]
+    assert capture_policies
+    assert all("sms-voice:SendTextMessage" not in policy for policy in capture_policies)
+    assert all("sns:Publish" not in policy for policy in capture_policies)
+
+
+def test_candidate_capture_targets_are_restricted_to_demo_stack() -> None:
+    for context_key in ("rust_candidate", "python_capture"):
+        app = cdk.App(context={context_key: True})
+        with pytest.raises(ValueError, match="restricted to BackcountrySmsEchoTest"):
+            BackcountrySmsAssistantStack(app, "BackcountrySmsEcho")
 
 
 def test_dashboard_is_single_demo_dashboard_for_every_stack() -> None:
