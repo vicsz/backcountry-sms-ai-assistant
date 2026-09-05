@@ -478,3 +478,35 @@ retrieval 1,108 ms, answer Bedrock 667 ms, and total Lambda processing 6,340 ms.
 an Algonquin result with score 0.949. The response was bounded to one SMS segment and cited
 `Ontario Parks - Algonquin Provincial Park`. These are single-run observations, not p50/p95
 claims; the existing metrics remain the source for percentile aggregation.
+
+## Stage 11 Rust candidate — Demo capture observation — 2026-09-05
+
+Deployment: committed candidate from `84156ed`, deployed beside the active Python function in the
+Demo `BackcountrySmsEchoTest` stack. The candidate was forced to test capture mode, used an isolated
+context table, had no inbound SNS subscription, and had no SMS permission. These observations are
+not a cutover or production benchmark.
+
+| Measure | Rust candidate observation |
+|---|---:|
+| Stripped x86-64 Linux executable | 16,080,256 bytes |
+| Standalone deployment zip | 6,688,805 bytes; one `bootstrap` file |
+| Lambda memory setting | 128 MB |
+| Lambda Max Memory Used | 38 MB maximum in the observed window |
+| Cold samples | 3; 6,726–7,346 ms total, 74.99–75.99 ms init |
+| Warm samples | 2; 587.8 ms and 611.05 ms total |
+
+The sample is intentionally small and includes provider/model work, so it is directional only. The
+matched Python invocation was not run: the active Python Demo function was configured for live
+delivery, and changing that normal target or sending a real SMS was outside this capture check.
+Existing historical Python measurements remain context, not a language comparison.
+
+Observed logical paths matched the contract: GPS weather used interpretation, weather, and advice
+Bedrock calls; named weather added one location call; guide lookup used interpretation, retrieval,
+and RAG response; context read/reserve/complete surrounded each accepted message. All candidate
+checks reported `sms_api_called=false` and `sns_published=false`. One follow-up and two fire-ban
+attempts exercised bounded malformed-model fallbacks; the fire-ban ingestion boundary remains
+deferred and is not live-verified.
+
+Rust-versus-Python latency, memory, retry, and call-count comparison remains blocked until a
+separately isolated Python capture target is available or an immediately authorized real-SMS
+check permits a matched normal-target run. Do not infer a Rust advantage from this observation.

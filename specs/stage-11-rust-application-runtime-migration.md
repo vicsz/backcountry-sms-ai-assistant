@@ -69,9 +69,17 @@ before deployment. CDK wiring is opt-in only: it creates a separate `provided.al
 function and context table, forces test/capture configuration, omits inbound SNS subscription and
 SMS permission, and leaves the Python Demo function active.
 
-No candidate deployment, deployed provider/Bedrock verification, Python/Rust parity run, or
-performance comparison is claimed yet. The Python runtime remains the deployed oracle and normal
-request path.
+The candidate was deployed to the Demo stack on 2026-09-05 from the follow-up implementation
+commits. Live capture checks passed for GPS weather, named-place weather, context follow-up after a
+retry, and Ontario Parks retrieval/answer generation; duplicate and capture guards also remained
+safe. Redacted candidate telemetry and Lambda REPORT data were inspected. Fire-ban live verification
+did not pass the model-output gate, and fire-ban ingestion remains deferred; its fixture-only
+behavior is not presented as live status.
+
+The Python runtime remains the deployed oracle and normal request path. A matched Python-versus-
+Rust performance/parity comparison has not been completed because the normal Python Demo target is
+configured for live delivery and no separate Python capture target exists. No normal-target Rust
+cutover or Python source removal is claimed.
 
 ## Decision boundary
 

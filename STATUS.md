@@ -59,7 +59,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Stage 9.4 — runtime configuration via Parameter Store | Proposed; design only |
 | Stage 10 — AI invocation boundary | Proposed; specification only |
 | Stage 10.1 — baseline application guardrails | Proposed; specification only |
-| Stage 11 — Rust application runtime migration | Partially implemented locally: concrete Rust adapters, 18 passing Rust tests, locked package path, and isolated capture-only candidate definition; Python remains the deployed implementation and no candidate parity/cutover/live gates have passed |
+| Stage 11 — Rust application runtime migration | Candidate deployed to Demo in forced capture mode; concrete adapters, 19 passing Rust tests, locked package path, GPS/named-weather/RAG live checks, and redacted telemetry verified; Python remains the deployed implementation, matched comparison and cutover gates remain open |
 | Multi-channel support and generalized autonomous-agent behavior | Deferred; outside the current release boundary |
 
 ## Operational controls already present
@@ -74,9 +74,9 @@ dedicated demo capture stack; this is the project's only deployed environment.
 
 ## Current next actions
 
-1. Validate the isolated Rust candidate locally, then deploy it to the Demo capture target for the
-   required redacted capture/provider gates.
-2. Run the matched Python-versus-Rust measurement and record only the reviewed aggregate.
+1. Provide a separately isolated Python capture target, or explicitly authorize the distinct real-
+   SMS path, so the matched Rust-versus-Python comparison can run safely.
+2. Resolve the remaining Rust fire-ban model-output gate; keep ingestion deferred and fixture-only.
 3. Keep Python active unless every Stage 11 parity, rollback, and observation gate passes.
 4. Rewrite the README and create publication-safe AWS architecture and operations diagrams.
 5. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
