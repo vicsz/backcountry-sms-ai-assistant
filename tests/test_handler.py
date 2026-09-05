@@ -301,6 +301,17 @@ def test_current_status_questions_redirect_without_model_or_retrieval(monkeypatc
     assert "check Ontario Parks directly" in handler._reply_for_message(question)
 
 
+@pytest.mark.parametrize("question", [
+    "What are the hours and prices at the Portage Store?",
+    "Does this guide publish current Portage Store opening hours?",
+])
+def test_time_sensitive_guide_details_redirect_without_model_or_retrieval(monkeypatch: pytest.MonkeyPatch, question: str) -> None:
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("model called")))
+    monkeypatch.setattr(handler.retrieval, "configured_retriever", lambda: (_ for _ in ()).throw(AssertionError("retrieval called")))
+    response = handler._reply_for_message(question)
+    assert "current park hours" in response
+
+
 def test_enh_0001_current_news_explains_data_boundary_without_model_or_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("model called")))
     monkeypatch.setattr(handler.retrieval, "configured_retriever", lambda: (_ for _ in ()).throw(AssertionError("retrieval called")))
@@ -429,6 +440,16 @@ def test_information_lookup_unusable_evidence_never_calls_uncited_model(monkeypa
     monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("response model called")))
     response = handler._information_lookup_reply("Does NeverListed Park have winter camping?")
     assert "Ontario Parks" in response
+
+
+def test_information_lookup_rejects_generic_hit_for_unknown_named_park(monkeypatch: pytest.MonkeyPatch) -> None:
+    local = retrieval.LocalRetriever([rag_result("Arrowhead", "Arrowhead lists canoe rentals.")])
+    monkeypatch.setattr(handler.retrieval, "configured_retriever", lambda: local)
+    monkeypatch.setattr(handler, "_bedrock_converse", lambda **_kwargs: (_ for _ in ()).throw(AssertionError("response model called")))
+
+    response = handler._information_lookup_reply("Does NeverListed Park have winter camping?")
+
+    assert "does not establish" in response
 
 
 @pytest.mark.parametrize("answer", ["", "Arrowhead is open today.", "Arrowhead has a marina and beach."])

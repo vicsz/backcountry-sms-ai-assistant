@@ -456,6 +456,36 @@ fn rag_claim_contradictions_are_rejected() {
 }
 
 #[test]
+fn information_lookup_rejects_generic_evidence_for_unknown_named_park() {
+    let result = backcountry_runtime::models::RetrievalResult {
+        excerpt: "Arrowhead lists canoe rentals.".into(),
+        citation: backcountry_runtime::models::RetrievalCitation {
+            park_name: "Arrowhead Provincial Park".into(),
+            section: "Facilities".into(),
+            source_url: "https://www.ontarioparks.ca/park/arrowhead".into(),
+            source_label: "Ontario Parks guide".into(),
+        },
+        score_millis: 900,
+        claims: vec![("canoe_rentals".into(), "yes".into())],
+    };
+    assert!(backcountry_runtime::domain::filter_retrieval_for_question(
+        "Does NeverListed Park have winter camping?",
+        vec![result]
+    )
+    .is_empty());
+}
+
+#[test]
+fn time_sensitive_guide_details_redirect_before_rag() {
+    assert_eq!(
+        backcountry_runtime::domain::current_status_redirect(
+            "What are the hours and prices at the Portage Store?"
+        ),
+        Some("For current park hours, rental/fee prices, or operating details, please check Ontario Parks directly.")
+    );
+}
+
+#[test]
 fn retrieval_evidence_is_bounded_before_model_context() {
     let result = backcountry_runtime::models::RetrievalResult {
         excerpt: "x".repeat(800),

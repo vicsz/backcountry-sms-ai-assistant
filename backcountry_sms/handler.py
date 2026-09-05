@@ -509,6 +509,8 @@ def _current_status_redirect(user_text: str) -> str | None:
     )
     if current_status:
         return "For current openings, closures, reservations, or availability, please check Ontario Parks directly."
+    if re.search(r"\b(?:hours?|opening hours|prices?|fees?|cost|operating)\b", lowered):
+        return "For current park hours, rental/fee prices, or operating details, please check Ontario Parks directly."
     if re.search(r"\b(weather|forecast|temperature|rain|wind)\b", lowered):
         return None
     if re.search(r"\b(fire|fire ban|burn ban|campfire)\b", lowered):
@@ -581,6 +583,7 @@ def _information_lookup_reply(user_text: str) -> str:
     except retrieval.RetrievalFailure as error:
         LOGGER.info("rag_retrieval_failed category=%s", error.category)
         return "I couldn't retrieve guide evidence right now. Please check Ontario Parks directly."
+    results = retrieval.filter_results_for_question(user_text, results)
     if not results or _conflicting_retrieval(results) or not _has_usable_citation(results):
         LOGGER.info("rag_retrieval_unusable")
         return "The Ontario Parks guide does not establish that answer. Please check Ontario Parks directly."

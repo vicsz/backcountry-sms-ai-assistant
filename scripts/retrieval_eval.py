@@ -22,6 +22,7 @@ TOP_K = (1, 3, 5)
 VARIANTS = (("fixed-200-20", 200, 20), ("fixed-300-30", 300, 30), ("fixed-500-50", 500, 50), ("heading-aware", 500, 0))
 THRESHOLDS = {"recall_at_3": 0.50, "precision_at_3": 0.25, "park_section_recall_at_3": 0.50, "unsupported_exclusion": 1.0, "current_status_routing": 1.0, "refusal_correctness": 1.0, "citation_accuracy": 0.50, "citation_completeness": 0.50, "groundedness": 1.0, "unsupported_claim_rate": 0.0, "max_p95_retrieval_ms": 100.0, "max_cost_per_question_usd": 0.0}
 STOP = {"a", "an", "and", "are", "based", "does", "for", "have", "i", "in", "is", "list", "me", "of", "on", "the", "to", "what", "which", "where", "with"}
+GENERIC_PARK_TERMS = {"ontario", "provincial", "park", "parks"}
 
 
 @dataclass(frozen=True)
@@ -118,7 +119,31 @@ def retrieve(question: str, chunks: list[Chunk], top_k: int) -> list[Hit]:
         if overlap:
             score = len(overlap) / max(1, len(query))
             ranked.append(Hit(chunk.chunk_id, round(score, 6), chunk.park, chunk.section, chunk.source_url, chunk.evidence, tuple(sorted(tokens(chunk.text)))) )
-    return sorted(ranked, key=lambda hit: (-hit.score, hit.chunk_id))[:top_k]
+    scoped = filter_hits_for_question(question, sorted(ranked, key=lambda hit: (-hit.score, hit.chunk_id)))
+    return scoped[:top_k]
+
+
+def filter_hits_for_question(question: str, hits: list[Hit]) -> list[Hit]:
+    question_terms = park_terms(question)
+    matching_terms = {
+        term
+        for hit in hits
+        for term in park_terms(hit.park)
+        if term in question_terms
+    }
+    if matching_terms:
+        return [hit for hit in hits if park_terms(hit.park) & matching_terms]
+    if re.search(r"\b(?:[A-Z][A-Za-z0-9'/-]*\s+){1,4}Park\b", question):
+        return []
+    return hits
+
+
+def park_terms(value: str) -> set[str]:
+    return {
+        term
+        for term in re.findall(r"[a-z0-9]+", value.casefold())
+        if len(term) > 2 and term not in GENERIC_PARK_TERMS
+    }
 
 
 def current_status(question: str) -> bool:
@@ -216,7 +241,7 @@ def evaluate(date: str = "2026-09-05") -> dict[str, Any]:
             retrieval_timing: list[float] = []
             generation_timing: list[float] = []
             for case in all_cases:
-                if case["class"] == "current-status":
+                if current_status(case["question"]):
                     is_routed = current_status(case["question"])
                     routed += int(is_routed)
                     case_results.append({"case_id": case["case_id"], "class": case["class"], "retriever_called": False, "routed_to": "live-status-boundary", "refusal_correctness": int(is_routed)})
@@ -226,21 +251,21 @@ def evaluate(date: str = "2026-09-05") -> dict[str, Any]:
                     retrieval_samples, generation_samples = _timing_samples(case, chunks, top_k)
                     retrieval_timing.extend(retrieval_samples)
                     generation_timing.extend(generation_samples)
-            retrieval_cases = [item for item in case_results if item.get("class") != "current-status"]
+            retrieval_cases = [item for item in case_results if item.get("retriever_called", True)]
             supported = [item for item in retrieval_cases if item["class"] == "supported"]
             negative = [item for item in retrieval_cases if item["class"] == "negative"]
-            all_evaluated = retrieval_cases + [item for item in case_results if item.get("class") == "current-status"]
+            all_evaluated = case_results
             candidates.append({
                 "variant": name,
                 "top_k": top_k,
                 "chunk_count": len(chunks),
-                "current_status_routing": routed / sum(case["class"] == "current-status" for case in all_cases),
+                "current_status_routing": routed / sum(current_status(case["question"]) for case in all_cases),
                 "aggregate": {
                     "recall_at_k": round(sum(item["recall"] or 0 for item in supported) / len(supported), 6),
                     "precision_at_k": round(sum(item["precision"] for item in supported) / len(supported), 6),
                     "park_section_recall": round(sum(item["park_section_recall"] for item in supported) / len(supported), 6),
                     "unsupported_evidence_exclusion": round(sum(not item["retrieved_ids"] for item in negative) / len(negative), 6),
-                    "current_status_routing": routed / sum(case["class"] == "current-status" for case in all_cases),
+                    "current_status_routing": routed / sum(current_status(case["question"]) for case in all_cases),
                     "refusal_correctness": round(sum(item["refusal_correctness"] for item in all_evaluated) / len(all_evaluated), 6),
                     "citation_accuracy": round(sum(item["citation_accuracy"] for item in supported) / len(supported), 6),
                     "citation_completeness": round(sum(item["citation_completeness"] for item in supported) / len(supported), 6),

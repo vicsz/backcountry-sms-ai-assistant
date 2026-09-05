@@ -21,3 +21,7 @@ boundary or preserves a useful parity check.
 
 The following remain intentionally separate from ordinary tests: live Bedrock/provider calls,
 ingestion or refresh operations, deployed capture checks, and real SMS sends.
+
+The retained Python request modules are a rollback/oracle boundary, not a second deployed path.
+Removing them requires a separate post-cutover decision with a preserved artifact and rollback
+evidence; this cleanup does not silently delete the CDK, ingestion, or evaluation tooling.

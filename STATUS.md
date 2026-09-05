@@ -11,10 +11,11 @@ natural-language locations, retrieves weather, uses bounded Amazon Bedrock inter
 synthesis, retains a short encrypted context window, returns one concise SMS, and includes
 observability, safe fallbacks, and explicit testing boundaries.
 
-There are no uncommitted Stage 9.2/9.3.2 runtime changes. That work is represented in the
-repository at the evidence states below. Stage 10 and Stage 9.2.1 remain documentation-only;
 Stage 11 is deployed to the Demo request path with Rust as the only Lambda runtime. Python remains
-for CDK/support code, while fire-ban ingestion remains deferred.
+for CDK/support, rollback, and evaluation code. Fire-ban live ingestion remains deferred; the
+current work adds only a local normalization/promotion primitive. RAG park scoping and
+time-sensitive routing are implemented locally and are promoted only through the normal runtime
+validation gate.
 
 Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed and verified on the
 dedicated demo capture stack; `ENH-0003` covers Rust-default hardening and test/documentation
@@ -50,14 +51,15 @@ cleanup. This is the project's only deployed environment.
 | Stage 9.2 — fire-ban/geospatial lookup | Implemented locally with validated topology, snapshots, and bounded Athena adapter; live S3/Athena deferred |
 | Stage 9.3.1 — Ontario Parks guide corpus | MVP corpus generated locally; rerunnable generator and refresh of time-sensitive park information deferred |
 | Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted retrieval smoke test passed without SMS/SNS; live baseline still returns generic corpus metadata and is not promoted |
+| Stage 9.3.3 — Knowledge-base retrieval tuning | Local park-scoping and time-sensitive routing guardrails deployed with Rust; offline benchmark retained as a diagnostic baseline; metadata, freshness, refresh, and live ranking gates remain deferred |
 
 ## Not done — proposed or deferred
 
 | Spec / capability | Current status |
 | --- | --- |
 | Stage 8 — broader production reliability | Proposed; burst SMS quota and delivery work remains |
-| Stage 9.2.1 — automated fire-ban/geospatial ingestion | Deferred; the Stage 9.2 lookup is implemented locally, but live ingestion, refresh, and promotion are not implemented |
-| Stage 9.3 — broader camping RAG knowledge base | Proposed; the Stage 9.3.3 live baseline needs section metadata and negative-query handling before promotion |
+| Stage 9.2.1 — automated fire-ban/geospatial ingestion | Deferred; local source normalization and atomic promotion tests exist, but live extraction, refresh, AWS publication, and promotion are not implemented |
+| Stage 9.3 — broader camping RAG knowledge base | Proposed; local park-scoping/current-detail gates exist, but the Stage 9.3.3 live baseline still needs section metadata, source-date handling, and a separately authorized promotion |
 | Stage 9.4 — runtime configuration via Parameter Store | Proposed; design only |
 | Stage 10 — AI invocation boundary | Proposed; specification only |
 | Stage 10.1 — baseline application guardrails | Proposed; specification only |
@@ -75,10 +77,10 @@ cleanup. This is the project's only deployed environment.
 
 ## Current next actions
 
-1. Keep fire-ban ingestion deferred and fixture-only; do not present snapshot status as live.
-2. Improve the broader Ontario Parks corpus/RAG metadata and negative-query behavior before any
-   promotion beyond the current MVP; freshness, source-date handling, and recurring ingestion are
-   explicitly deferred.
-3. Rewrite the README and create publication-safe AWS architecture and operations diagrams.
+1. Keep fire-ban live ingestion deferred; do not present local snapshots or normalized artifacts as live.
+2. Keep RAG freshness/source-date handling, corpus refresh, and recurring ingestion deferred until
+   the metadata and live retrieval gates are separately authorized.
+3. Retire the Python rollback/oracle surface only after another observed Rust-only window and an
+   explicit rollback-removal decision; retain Python CDK/support code.
 4. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
    commit.

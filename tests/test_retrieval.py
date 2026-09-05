@@ -15,6 +15,7 @@ from backcountry_sms.retrieval import (
     RetrievalCitation,
     RetrievalFailure,
     RetrievalResult,
+    filter_results_for_question,
 )
 from scripts.retrieval_eval import (
     GOLDEN,
@@ -36,6 +37,18 @@ def test_local_retriever_is_typed_bounded_test_double() -> None:
     retriever = LocalRetriever([result() for _ in range(MAX_RETRIEVAL_RESULTS + 1)])
     assert len(retriever.retrieve("What facilities are listed?")) == MAX_RETRIEVAL_RESULTS
     assert retriever.questions == ["What facilities are listed?"]
+
+
+def test_named_unknown_park_does_not_accept_generic_hits() -> None:
+    results = [result("Arrowhead Provincial Park")]
+    assert filter_results_for_question("Does NeverListed Park have winter camping?", results) == []
+
+
+def test_named_park_scoping_keeps_matching_evidence_and_broad_queries() -> None:
+    results = [result("Arrowhead Provincial Park"), result("Killarney Provincial Park")]
+    scoped = filter_results_for_question("What facilities are listed for Arrowhead?", results)
+    assert [item.citation.park_name for item in scoped] == ["Arrowhead Provincial Park"]
+    assert len(filter_results_for_question("Which Ontario parks mention canoeing?", results)) == 2
 
 
 def test_corpus_sidecar_supplies_checked_in_source_metadata() -> None:

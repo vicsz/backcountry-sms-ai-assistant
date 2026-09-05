@@ -28,6 +28,7 @@ MIN_RETRIEVAL_SCORE = 0.4
 RAG_RETRIEVAL_CONNECT_TIMEOUT_SECONDS = 1
 RAG_RETRIEVAL_READ_TIMEOUT_SECONDS = 4
 RAG_RETRIEVAL_MAX_ATTEMPTS = 1
+_GENERIC_PARK_TERMS = {"ontario", "provincial", "park", "parks"}
 
 
 class RetrievalFailure(RuntimeError):
@@ -162,6 +163,38 @@ def _parse_result(item: object) -> RetrievalResult | None:
 def _bounded_results(results: list[RetrievalResult]) -> list[RetrievalResult]:
     useful = [item for item in results if item.excerpt and item.score >= MIN_RETRIEVAL_SCORE]
     return useful[:MAX_RETRIEVAL_RESULTS]
+
+
+def filter_results_for_question(question: str, results: list[RetrievalResult]) -> list[RetrievalResult]:
+    """Keep evidence scoped to an explicitly named park when one is identifiable."""
+    question_terms = _park_terms(question)
+    matching_terms = {
+        term
+        for result in results
+        for term in _park_terms(result.citation.park_name)
+        if term in question_terms
+    }
+    if matching_terms:
+        return [
+            result
+            for result in results
+            if _park_terms(result.citation.park_name) & matching_terms
+        ]
+    if _explicit_unknown_park(question):
+        return []
+    return results
+
+
+def _park_terms(value: str) -> set[str]:
+    return {
+        term
+        for term in re.findall(r"[a-z0-9]+", value.casefold())
+        if len(term) > 2 and term not in _GENERIC_PARK_TERMS
+    }
+
+
+def _explicit_unknown_park(question: str) -> bool:
+    return bool(re.search(r"\b(?:[A-Z][A-Za-z0-9'/-]*\s+){1,4}Park\b", question))
 
 
 def _metadata_attributes(value: object) -> dict[object, object]:

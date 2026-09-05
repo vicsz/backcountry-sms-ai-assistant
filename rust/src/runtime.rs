@@ -570,7 +570,9 @@ fn information_lookup(
 ) -> String {
     adapter_call(services, "retrieval", "bedrock");
     let results = match services.retriever.retrieve(text) {
-        Ok(value) => domain::normalize_retrieval(value),
+        Ok(value) => {
+            domain::filter_retrieval_for_question(text, domain::normalize_retrieval(value))
+        }
         Err(_) => return domain::RAG_RETRIEVAL_FAILURE.into(),
     };
     if !domain::usable_retrieval(&results) {

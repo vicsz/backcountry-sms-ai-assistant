@@ -4,6 +4,18 @@ Status: Deferred implementation; specification complete. Stage 9.2's prepared lo
 remains the current implementation; live source retrieval, S3 publication, Athena query,
 deployment, and provider verification are not yet implemented or established by this document.
 
+## Discovery-only source reachability check — 2026-09-05
+
+A bounded, read-only fetch confirmed that the three documented official endpoints responded without
+writing or promoting data. The check retained only redacted size/hash metadata: Ontario Parks
+alerts returned 182,436 bytes (`sha256:c56acc03010f3be67a9a259468c8db6a85b2bbe51cf7b28a9b625d627c9ffe27`),
+the LIO Provincial Park Regulated endpoint returned 10,119 bytes
+(`sha256:8bafd98c5ac7949a32db71daf86d1077f9b2860e0439fa7541520a2a5501f90d`), and the LIO
+Restricted Fire Zone endpoint returned 5,588 bytes
+(`sha256:95edbc3abbe4179a271b24fbd7b4a5e35df423ccaa4439c0dc9763dfd7631617`). This proves
+reachability at one point in time only. It does not establish terms approval, parser correctness,
+coverage/join quality, a refresh schedule, a live feed, or a promoted snapshot.
+
 ## Objective
 
 Define a bounded, repeatable ingestion path for the Stage 9.2 Ontario provincial-park lookup. A

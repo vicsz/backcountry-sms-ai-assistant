@@ -144,6 +144,11 @@ def lookup(latitude: float, longitude: float, snapshot: StaticSnapshot | None = 
     return FireBanResult(cast(str, park["park_name"]), "Ontario Parks", "fire_ban" if normalized == "active" else "no_current_fire_ban_record", _text_or_none(status, "source_as_of"), _text_or_none(status, "retrieved_at") or snapshot.snapshot_created_at, _text_or_none(status, "source_url") or "https://www.ontarioparks.ca/alerts", _text_or_none(status, "source_hash"), snapshot.snapshot_id, freshness, _text_or_none(status, "raw_wording"), boundary=boundary)
 
 
+def validate_snapshot(snapshot: StaticSnapshot, *, now: datetime | None = None) -> str | None:
+    """Return a deterministic validation error for ingestion/promotion callers."""
+    return _validate_snapshot(snapshot, now or datetime.now(UTC))
+
+
 def point_in_wkt(latitude: float, longitude: float, wkt: str) -> BoundaryOutcome:
     _validate_point(latitude, longitude)
     polygons = _parse_wkt(wkt)

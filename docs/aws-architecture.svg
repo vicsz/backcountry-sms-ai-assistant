@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">Backcountry SMS AI Assistant AWS architecture</title>
+  <desc id="desc">Rust Lambda request path deployed by Python CDK, with weather, stable RAG, deferred fire-ban ingestion, and observability.</desc>
+  <style>
+    text { font-family: Arial, sans-serif; fill: #111827; }
+    .title { font-size: 30px; font-weight: 700; }
+    .sub { font-size: 17px; }
+    .box { fill: #ffffff; stroke: #334155; stroke-width: 2; rx: 12; }
+    .data { fill: #eff6ff; stroke: #2563eb; stroke-width: 2; rx: 12; }
+    .deferred { fill: #fff7ed; stroke: #c2410c; stroke-width: 2; stroke-dasharray: 8 6; rx: 12; }
+    .label { font-size: 16px; font-weight: 700; }
+    .small { font-size: 14px; }
+    .arrow { stroke: #111827; stroke-width: 2.5; marker-end: url(#arrow); fill: none; }
+    .blue-arrow { stroke: #2563eb; stroke-width: 2; marker-end: url(#arrow-blue); fill: none; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#111827"/></marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/></marker>
+  </defs>
+  <text x="700" y="45" text-anchor="middle" class="title">Backcountry SMS AI Assistant</text>
+  <text x="700" y="72" text-anchor="middle" class="sub">Two-way SMS over satellite or cellular, using a bounded Rust request runtime</text>
+
+  <rect x="35" y="120" width="170" height="125" class="box"/><text x="120" y="150" text-anchor="middle" class="label">SMS sender</text><text x="120" y="178" text-anchor="middle" class="small">iPhone Messages</text><text x="120" y="200" text-anchor="middle" class="small">satellite/cellular</text>
+  <rect x="255" y="145" width="175" height="80" class="box"/><text x="342" y="178" text-anchor="middle" class="label">AWS End User</text><text x="342" y="200" text-anchor="middle" class="small">Messaging SMS</text>
+  <rect x="480" y="145" width="160" height="80" class="box"/><text x="560" y="178" text-anchor="middle" class="label">Amazon SNS</text><text x="560" y="200" text-anchor="middle" class="small">inbound notification</text>
+  <rect x="690" y="125" width="220" height="120" class="data"/><text x="800" y="158" text-anchor="middle" class="label">Rust Lambda</text><text x="800" y="181" text-anchor="middle" class="small">provided.al2023</text><text x="800" y="204" text-anchor="middle" class="small">deployed request path</text>
+  <rect x="960" y="145" width="175" height="80" class="box"/><text x="1047" y="178" text-anchor="middle" class="label">AWS End User</text><text x="1047" y="200" text-anchor="middle" class="small">Messaging SMS API</text>
+  <path d="M205 185 H255" class="arrow"/><path d="M430 185 H480" class="arrow"/><path d="M640 185 H690" class="arrow"/><path d="M910 185 H960" class="arrow"/><path d="M960 210 H205" class="arrow"/>
+  <text x="800" y="285" text-anchor="middle" class="sub">Python CDK deploys the stack; it is not the request runtime</text>
+
+  <rect x="55" y="335" width="300" height="200" class="data"/><text x="205" y="368" text-anchor="middle" class="label">Current weather</text><text x="205" y="405" text-anchor="middle" class="small">Open-Meteo / Environment Canada</text><text x="205" y="435" text-anchor="middle" class="small">bounded provider lookup</text><text x="205" y="475" text-anchor="middle" class="small">deterministic safety summary</text>
+  <rect x="400" y="335" width="300" height="200" class="data"/><text x="550" y="368" text-anchor="middle" class="label">Stable Ontario Parks RAG</text><text x="550" y="405" text-anchor="middle" class="small">S3 curated corpus</text><text x="550" y="435" text-anchor="middle" class="small">Bedrock Knowledge Base / S3 Vectors</text><text x="550" y="475" text-anchor="middle" class="small">bounded, cited retrieval</text>
+  <rect x="745" y="335" width="300" height="200" class="deferred"/><text x="895" y="368" text-anchor="middle" class="label">Fire-ban geospatial data</text><text x="895" y="405" text-anchor="middle" class="small">local fixture + normalization only</text><text x="895" y="435" text-anchor="middle" class="small">S3/Athena ingestion deferred</text><text x="895" y="475" text-anchor="middle" class="small">not live-verified or promoted</text>
+  <rect x="1090" y="335" width="250" height="200" class="data"/><text x="1215" y="368" text-anchor="middle" class="label">Context + AI</text><text x="1215" y="405" text-anchor="middle" class="small">DynamoDB short-lived context</text><text x="1215" y="435" text-anchor="middle" class="small">Bedrock interpretation/synthesis</text><text x="1215" y="475" text-anchor="middle" class="small">CloudWatch + X-Ray</text>
+  <path d="M800 245 V290 H205 V335" class="blue-arrow"/><path d="M800 245 V290 H550 V335" class="blue-arrow"/><path d="M800 245 V290 H895 V335" class="blue-arrow"/><path d="M800 245 V290 H1215 V335" class="blue-arrow"/>
+  <text x="700" y="610" text-anchor="middle" class="sub">Solid = deployed Demo path   ·   Dashed orange = local/proposed, explicitly deferred</text>
+</svg>

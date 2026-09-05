@@ -110,6 +110,12 @@ pub fn current_status_redirect(text: &str) -> Option<&'static str> {
     if current.is_match(&lower) {
         return Some("For current openings, closures, reservations, or availability, please check Ontario Parks directly.");
     }
+    if Regex::new(r"\b(hours?|opening hours|prices?|fees?|cost|operating)\b")
+        .unwrap()
+        .is_match(&lower)
+    {
+        return Some("For current park hours, rental/fee prices, or operating details, please check Ontario Parks directly.");
+    }
     if contains_weather_term(text) || contains_fire_term(text) {
         return None;
     }
@@ -370,6 +376,45 @@ pub fn normalize_retrieval(results: Vec<RetrievalResult>) -> Vec<RetrievalResult
         })
         .filter(|result| !result.excerpt.is_empty() && result.score_millis >= 400)
         .take(3)
+        .collect()
+}
+
+pub fn filter_retrieval_for_question(
+    question: &str,
+    results: Vec<RetrievalResult>,
+) -> Vec<RetrievalResult> {
+    let question_terms = park_terms(question);
+    let matching_terms: HashSet<String> = results
+        .iter()
+        .flat_map(|result| park_terms(&result.citation.park_name))
+        .filter(|term| question_terms.contains(term))
+        .collect();
+    if !matching_terms.is_empty() {
+        return results
+            .into_iter()
+            .filter(|result| {
+                park_terms(&result.citation.park_name)
+                    .iter()
+                    .any(|term| matching_terms.contains(term))
+            })
+            .collect();
+    }
+    if Regex::new(r"\b(?:[A-Z][A-Za-z0-9'/-]*\s+){1,4}Park\b")
+        .unwrap()
+        .is_match(question)
+    {
+        return Vec::new();
+    }
+    results
+}
+
+fn park_terms(value: &str) -> HashSet<String> {
+    let generic = ["ontario", "provincial", "park", "parks"];
+    Regex::new(r"[A-Za-z0-9]+")
+        .unwrap()
+        .find_iter(value)
+        .map(|term| term.as_str().to_ascii_lowercase())
+        .filter(|term| term.len() > 2 && !generic.contains(&term.as_str()))
         .collect()
 }
 

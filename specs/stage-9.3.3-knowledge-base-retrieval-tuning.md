@@ -1,6 +1,6 @@
 # Stage 9.3.3 — Knowledge Base retrieval and chunking tuning
 
-Status: Partially implemented — offline evaluation capability
+Status: Partially implemented — offline evaluation and deployed routing guardrails
 
 The current live baseline is retained but not promoted: it lacks useful per-park/section metadata
 and does not reliably distinguish unsupported or unknown-park questions. Freshness, source-date
@@ -206,6 +206,22 @@ boundary in the evaluation and never invoke retrieval.
 This does not establish Bedrock/Titan ranking, provider latency, generation quality, or a rollout
 recommendation. The Stage 9.3.2 deployed baseline remains unchanged pending any separately
 authorized live retrieval evaluation and later deployment decision.
+
+## Implementation record — local quality gates and Demo routing guardrails
+
+Date: 2026-09-05
+
+`ENH-0004` added deterministic named-park scoping to the Python and Rust retrieval paths and
+routes time-sensitive hours, prices, operating, opening, closure, reservation, and availability
+questions outside the one-time static guide. Rust contract tests and Python compatibility tests
+cover unknown named parks, matching named parks, broad questions, and the time-sensitive Portage
+Store examples. The validated Rust artifact was deployed to `BackcountrySmsEchoTest`; a safe
+Lambda DryRun and SNS subscription inspection passed, but the target was configured for live
+delivery, so no request invocation was made and no SMS was sent.
+
+These guardrails do not promote a new embedding/chunking configuration or make the corpus current.
+Per-section metadata, source dates, refresh/ingestion, and a live Bedrock retrieval/generation
+comparison remain deferred.
 
 ## Implementation record — live baseline characterization
 

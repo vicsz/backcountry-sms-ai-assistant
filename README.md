@@ -31,7 +31,7 @@ and [Messages via satellite documentation](https://support.apple.com/en-euro/gui
 
 ## Architecture
 
-![Backcountry SMS AI Assistant AWS architecture](aws-architecture.png)
+![Backcountry SMS AI Assistant AWS architecture](docs/aws-architecture.svg)
 
 The deployed core is a two-way SMS flow: satellite-enabled iPhone Messages reach AWS End User
 Messaging SMS, which publishes an inbound notification to Amazon SNS and invokes the Rust Lambda
@@ -40,8 +40,9 @@ DynamoDB SMS thread context, provider lookups, and Amazon Bedrock, then sends th
 through the AWS End User Messaging SMS API.
 
 The source-backed extensions add an Amazon Bedrock Knowledge Base backed by an Amazon S3 Vectors
-vector database over an S3-curated Ontario Parks corpus, plus versioned S3 fire-ban snapshots
-queried through Amazon Athena for geospatial lookups.
+vector database over an S3-curated Ontario Parks corpus. Fire-ban geospatial lookup and its
+versioned S3/Athena ingestion are specified and exercised locally, but the live ingestion path is
+explicitly deferred.
 
 The Ontario Parks Knowledge Base, S3 Vectors, and one-time snapshot ingestion are deployed on the
 Demo target. Their freshness/source-date contract and recurring refresh remain deferred. The
