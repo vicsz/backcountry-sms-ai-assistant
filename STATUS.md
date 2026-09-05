@@ -12,9 +12,9 @@ synthesis, retains a short encrypted context window, returns one concise SMS, an
 observability, safe fallbacks, and explicit testing boundaries.
 
 There are no uncommitted Stage 9.2/9.3.2 runtime changes. That work is represented in the
-repository at the evidence states below. The proposed Stage 10, Stage 9.2.1, and Stage 11
-specifications remain documentation-only until separately implemented and validated; the current
-documentation edits are limited to this status correction and those specification updates.
+repository at the evidence states below. Stage 10 and Stage 9.2.1 remain documentation-only;
+Stage 11 has a local Rust safety/runtime slice, but it is not wired to AWS, packaged as a candidate
+Lambda, or deployed.
 
 Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed and verified on the
 dedicated demo capture stack; this is the project's only deployed environment.
@@ -47,7 +47,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Stage 9.1 — static typing | Implemented locally; `mypy` build/CI gate and negative check added |
 | Stage 9.2 — fire-ban/geospatial lookup | Implemented locally with validated topology, snapshots, and bounded Athena adapter; live S3/Athena deferred |
 | Stage 9.3.1 — Ontario Parks guide corpus | MVP corpus generated locally; rerunnable generator and refresh of time-sensitive park information deferred |
-| Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted Algonquin retrieval smoke test passed without SMS/SNS |
+| Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted retrieval smoke test passed without SMS/SNS; live baseline still returns generic corpus metadata |
 
 ## Not done — proposed or deferred
 
@@ -55,11 +55,11 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | --- | --- |
 | Stage 8 — broader production reliability | Proposed; burst SMS quota and delivery work remains |
 | Stage 9.2.1 — automated fire-ban/geospatial ingestion | Deferred; the Stage 9.2 lookup is implemented locally, but live ingestion, refresh, and promotion are not implemented |
-| Stage 9.3 — broader camping RAG knowledge base | Proposed; follows the fire-ban/source work |
+| Stage 9.3 — broader camping RAG knowledge base | Proposed; the Stage 9.3.3 live baseline needs section metadata and negative-query handling before promotion |
 | Stage 9.4 — runtime configuration via Parameter Store | Proposed; design only |
 | Stage 10 — AI invocation boundary | Proposed; specification only |
 | Stage 10.1 — baseline application guardrails | Proposed; specification only |
-| Stage 11 — Rust application runtime migration | Proposed; specification only; the Python runtime remains the current implementation |
+| Stage 11 — Rust application runtime migration | Partially implemented locally: compileable Rust bootstrap/event, policy, typed-model, GSM-7, and adapter-seam slice; Python remains the deployed implementation and no parity/cutover/live gates have passed |
 | Multi-channel support and generalized autonomous-agent behavior | Deferred; outside the current release boundary |
 
 ## Operational controls already present

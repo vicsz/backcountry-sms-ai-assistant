@@ -25,3 +25,5 @@ dist/
 # Local evaluation reports, brainstorming, drafts, and other private working material.
 local/
 .jsii-cache/
+rust/target/
+rust/dist/

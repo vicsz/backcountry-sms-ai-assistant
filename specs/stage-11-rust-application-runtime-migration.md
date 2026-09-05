@@ -1,6 +1,8 @@
 # Stage 11 — Rust application runtime migration
 
-**Status:** Proposed; specification only
+**Status:** Partially implemented locally; compileable Rust safety/runtime slice only. The Python
+runtime remains the deployed oracle; provider parity, capture-matrix verification, packaging into a
+candidate Lambda, measurement, review, live gates, and cutover remain outstanding.
 
 ## Objective
 
@@ -46,6 +48,22 @@ experiments recorded roughly 2.2-2.4 seconds for small warm samples. The compari
 must rerun a matched baseline rather than treating those historical samples as a definitive target.
 The evidence source is [`docs/performance.md`](../docs/performance.md); every new run must also
 record the exact implementation commit and deployed function/version.
+
+## Implementation record — local safety/runtime slice
+
+Date: 2026-09-05
+
+The first local slice implements nested event parsing, sender and capture guards, typed
+interpretation validation, deterministic routing, provider-result safety checks, weather/fire-ban/
+retrieval orchestration through injected adapter traits, GSM-7 output bounding, and deterministic
+fakes. It has 14 passing Rust integration tests and passes formatting and clippy checks offline.
+The Python runtime and CDK remain unchanged in the deployed request path.
+
+The AWS/HTTP adapter wiring was attempted but not completed: the build environment could not resolve
+the crates.io registry, and no adapter implementation landed. The local Homebrew Rust toolchain also
+does not provide the pinned Linux target without rustup/target installation. Accordingly, no
+cross-compiled Lambda package, deployed candidate, Python/Rust parity run, or Rust performance
+comparison is claimed here.
 
 ## Decision boundary
 

@@ -203,6 +203,24 @@ This does not establish Bedrock/Titan ranking, provider latency, generation qual
 recommendation. The Stage 9.3.2 deployed baseline remains unchanged pending any separately
 authorized live retrieval evaluation and later deployment decision.
 
+## Implementation record — live baseline characterization
+
+Date: 2026-09-05
+
+An explicitly authorized, read-only retrieval check ran against the deployed Demo capture stack
+using seven synthetic golden questions and `top_k=5`: Algonquin guide information, Killarney
+camping, Arrowhead facilities, multi-park canoeing, canoe rentals, unsupported Portage Store
+hours/prices, and an unknown park. No Lambda invocation, ingestion mutation, SNS publish, or SMS
+send occurred. The check retained only aggregate outcomes and safe metadata labels.
+
+All seven questions returned five results. The results exposed a baseline citation limitation:
+park and section metadata were absent, and the source metadata resolved to the generic public
+Ontario Parks locator URL. Unsupported and unknown-park questions also returned generic corpus
+hits, so retrieval membership alone cannot be treated as answer-bearing evidence. No candidate
+configuration was promoted. The safe decision is to retain the deployed baseline while a later,
+separately scoped change addresses per-section metadata, negative-query handling, and live
+generation/citation evaluation.
+
 ## Acceptance criteria
 
 - The golden set includes Algonquin, Killarney, Arrowhead, canoe rentals versus `Rentals - Canoe`,

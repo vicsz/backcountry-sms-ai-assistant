@@ -18,6 +18,41 @@ This is an offline retrieval baseline only; its ordering and timings must not be
 embedding, Knowledge Base, generation, or provider-latency measurements. No candidate is approved
 for deployment. Live retrieval and any ingestion/deployment decision remain separately authorized.
 
+### Redacted live baseline characterization
+
+Date: 2026-09-05
+Deployment: current Demo capture stack; read-only Bedrock Retrieve call
+Scope: seven synthetic golden questions, requested top-k 5
+
+The live check returned five results for each question, but every result exposed only generic
+corpus source metadata: park and section labels were absent and the source resolved to the public
+Ontario Parks locator URL. Unsupported Portage Store hours/prices and unknown-park questions also
+returned generic corpus hits. This is evidence that the deployed baseline can retrieve corpus
+material, not evidence that the returned material supports the answer or that citations are
+park-specific.
+
+No Lambda invocation, ingestion mutation, SNS publish, or SMS send occurred. The result is
+therefore a read-only characterization, not a rollout approval. Keep the current baseline until a
+separate change improves per-section metadata and demonstrates negative-query exclusion plus live
+generation/citation behavior.
+
+## Stage 11 — local Rust slice measurement
+
+Date: 2026-09-05
+Implementation: local safety/runtime slice; host build on Apple Silicon
+
+| Dimension | Rust slice evidence | Status / limitation |
+|---|---:|---|
+| Optimized host bootstrap executable | 1,050,144 bytes | Measured with the optimized local build; not a Lambda artifact |
+| Compressed deployment zip | Not measured | Linux target and AWS adapter-backed package are not available |
+| Cold start / warm execution | Not measured | No Rust Lambda candidate was deployed |
+| Max memory / estimated footprint | Not measured | Lambda `Max Memory Used` requires a deployed candidate |
+| Provider/model/persistence calls | Deterministic fake call-path tests only | No AWS/HTTP adapter implementation landed |
+
+The 14 local Rust tests passed, but these figures must not be compared with the Python Lambda
+baseline as a language benchmark. A valid comparison requires the same deployed capture matrix,
+cross-compiled target, concrete adapters, and matched cold/warm samples.
+
 ## Baseline — deployed unoptimized workflow
 
 Date: 2026-08-30
