@@ -17,7 +17,8 @@ Stage 11 is deployed to the Demo request path with Rust as the only Lambda runti
 for CDK/support code, while fire-ban ingestion remains deferred.
 
 Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed and verified on the
-dedicated demo capture stack; this is the project's only deployed environment.
+dedicated demo capture stack; `ENH-0003` covers Rust-default hardening and test/documentation
+cleanup. This is the project's only deployed environment.
 
 ## Done — deployed and verified
 
@@ -48,7 +49,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Stage 9.1 — static typing | Implemented locally; `mypy` build/CI gate and negative check added |
 | Stage 9.2 — fire-ban/geospatial lookup | Implemented locally with validated topology, snapshots, and bounded Athena adapter; live S3/Athena deferred |
 | Stage 9.3.1 — Ontario Parks guide corpus | MVP corpus generated locally; rerunnable generator and refresh of time-sensitive park information deferred |
-| Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted retrieval smoke test passed without SMS/SNS; live baseline still returns generic corpus metadata |
+| Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted retrieval smoke test passed without SMS/SNS; live baseline still returns generic corpus metadata and is not promoted |
 
 ## Not done — proposed or deferred
 
@@ -76,7 +77,8 @@ dedicated demo capture stack; this is the project's only deployed environment.
 
 1. Keep fire-ban ingestion deferred and fixture-only; do not present snapshot status as live.
 2. Improve the broader Ontario Parks corpus/RAG metadata and negative-query behavior before any
-   promotion beyond the current MVP.
+   promotion beyond the current MVP; freshness, source-date handling, and recurring ingestion are
+   explicitly deferred.
 3. Rewrite the README and create publication-safe AWS architecture and operations diagrams.
 4. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
    commit.

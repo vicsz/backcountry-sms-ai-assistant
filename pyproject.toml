@@ -5,6 +5,7 @@ markers = [
     "integration: opt-in live provider and Bedrock contract checks",
     "eval_model: model interpretation and response evaluations",
     "eval_location: named-place provider evaluations",
+    "legacy_python_runtime: retained Python runtime oracle; Rust is the authoritative request-path test owner",
 ]
 
 [tool.ruff]

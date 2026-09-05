@@ -64,9 +64,27 @@ jobs:
         if: steps.changes.outputs.docs_only != 'true'
         with:
           node-version: "22"
+      - name: Install pinned Rust toolchain
+        if: steps.changes.outputs.docs_only != 'true'
+        run: rustup toolchain install 1.98.0 --profile minimal --target x86_64-unknown-linux-gnu --component rustfmt --component clippy
       - name: Install Python dependencies
         if: steps.changes.outputs.docs_only != 'true'
         run: python -m pip install -r requirements-dev.txt
+      - name: Rust formatting
+        if: steps.changes.outputs.docs_only != 'true'
+        run: make -C rust fmt
+      - name: Rust checks
+        if: steps.changes.outputs.docs_only != 'true'
+        run: make -C rust check
+      - name: Rust tests
+        if: steps.changes.outputs.docs_only != 'true'
+        run: make -C rust test
+      - name: Rust clippy
+        if: steps.changes.outputs.docs_only != 'true'
+        run: make -C rust clippy
+      - name: Rust Lambda package
+        if: steps.changes.outputs.docs_only != 'true'
+        run: make -C rust package
       - name: Lint
         if: steps.changes.outputs.docs_only != 'true'
         run: ruff check .
@@ -78,10 +96,16 @@ jobs:
         run: ./scripts/check-mypy-negative.sh
       - name: Unit tests
         if: steps.changes.outputs.docs_only != 'true'
-        run: pytest
+        run: pytest -m 'not legacy_python_runtime'
+      - name: Legacy Python oracle tests
+        if: steps.changes.outputs.docs_only != 'true'
+        run: pytest -m legacy_python_runtime
       - name: Offline evaluation gates
         if: steps.changes.outputs.docs_only != 'true'
         run: pytest -m 'eval_model or eval_location' --eval-mode=offline --eval-report-dir=local/evaluations/ci
       - name: CDK synth
         if: steps.changes.outputs.docs_only != 'true'
         run: npx --yes aws-cdk@2 synth --quiet
+      - name: CDK Python rollback synth
+        if: steps.changes.outputs.docs_only != 'true'
+        run: npx --yes aws-cdk@2 synth --context rust_runtime=false --quiet

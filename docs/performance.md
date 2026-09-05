@@ -36,7 +36,7 @@ therefore a read-only characterization, not a rollout approval. Keep the current
 separate change improves per-section metadata and demonstrates negative-query exclusion plus live
 generation/citation behavior.
 
-## Stage 11 — local Rust slice measurement
+## Stage 11 — local Rust slice measurement (historical pre-deployment)
 
 Date: 2026-09-05
 Implementation: local safety/runtime slice; host build on Apple Silicon
@@ -49,7 +49,7 @@ Implementation: local safety/runtime slice; host build on Apple Silicon
 | Max memory / estimated footprint | Not measured | Lambda `Max Memory Used` requires a deployed candidate |
 | Provider/model/persistence calls | Deterministic fake call-path tests only | No AWS/HTTP adapter implementation landed |
 
-The 14 local Rust tests passed, but these figures must not be compared with the Python Lambda
+The 14 local Rust tests passed at that earlier point, but these figures must not be compared with the Python Lambda
 baseline as a language benchmark. A valid comparison requires the same deployed capture matrix,
 cross-compiled target, concrete adapters, and matched cold/warm samples.
 
@@ -479,9 +479,13 @@ an Algonquin result with score 0.949. The response was bounded to one SMS segmen
 `Ontario Parks - Algonquin Provincial Park`. These are single-run observations, not p50/p95
 claims; the existing metrics remain the source for percentile aggregation.
 
-## Stage 11 Rust candidate — Demo capture observation — 2026-09-05
+## Stage 11 Rust candidate — Demo capture observation — 2026-09-05 (historical pre-cutover)
 
-Deployment: committed candidate from `84156ed`, deployed beside the active Python function in the
+This section records the isolated candidate phase. It is superseded by the matched comparison and
+normal-target promotion recorded later in this file; references below to the active Python path are
+historical observations, not the current deployment.
+
+Deployment: committed candidate from `84156ed`, deployed beside the then-active Python function in the
 Demo `BackcountrySmsEchoTest` stack. The candidate was forced to test capture mode, used an isolated
 context table, had no inbound SNS subscription, and had no SMS permission. These observations are
 not a cutover or production benchmark.
@@ -511,7 +515,7 @@ Rust-versus-Python latency, memory, retry, and call-count comparison remains blo
 separately isolated Python capture target is available or an immediately authorized real-SMS
 check permits a matched normal-target run. Do not infer a Rust advantage from this observation.
 
-### Stage 11 controlled Demo canary — 2026-09-05
+### Stage 11 controlled Demo canary — 2026-09-05 (historical pre-cutover)
 
 The isolated Rust candidate was exercised with three synthetic direct invocations against the Demo
 `BackcountrySmsEchoTest` stack. It remained forced to test/capture mode, used an isolated context
@@ -527,10 +531,10 @@ All three cases reported `sms_api_called=false` and `sns_published=false`. The f
 observation window exceeded 15 minutes and recorded three Lambda invocations, zero Lambda errors,
 zero error-like log events, redacted telemetry, and no observed prohibited sensitive fields.
 
-This is a successful Demo candidate canary, not a cutover or Python-versus-Rust benchmark. Python
-remained the normal request path, and the matched comparison, complete failure matrix, application
-span verification, rollback test, and normal-target promotion remain open. Fire-ban ingestion was
-outside this canary and remains deferred.
+This was a successful Demo candidate canary, not a cutover or Python-versus-Rust benchmark. Python
+was still the normal request path at that point; the matched comparison, complete failure matrix,
+application-span verification, rollback test, and normal-target promotion were completed later.
+Fire-ban ingestion was outside this canary and remains deferred.
 
 ## Stage 11 — matched Python versus Rust capture comparison and cutover
 

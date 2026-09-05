@@ -153,6 +153,25 @@ def test_dedicated_test_stack_defaults_to_nova_micro() -> None:
     template.has_parameter("BedrockModelId", {"Default": NOVA_MICRO_MODEL_ID})
 
 
+def test_demo_stack_defaults_to_rust_only_request_runtime() -> None:
+    app = cdk.App()
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+
+    functions = template.find_resources("AWS::Lambda::Function")
+    rust_functions = [
+        resource for resource in functions.values()
+        if resource["Properties"].get("Runtime") == "provided.al2023"
+    ]
+    assert len(rust_functions) == 1
+    assert all(
+        resource["Properties"].get("Handler") != "backcountry_sms.handler.lambda_handler"
+        for resource in functions.values()
+    )
+    subscriptions = template.find_resources("AWS::SNS::Subscription")
+    inbound = [resource for resource in subscriptions.values() if "RustRuntimeFunction" in json.dumps(resource)]
+    assert len(inbound) == 1
+
+
 def test_rust_candidate_is_opt_in_and_not_subscribed_to_inbound_sns() -> None:
     app = cdk.App(context={"rust_candidate": True})
     template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
@@ -251,6 +270,19 @@ def test_rust_runtime_template_contains_no_python_request_lambda() -> None:
     template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
     functions = template.find_resources("AWS::Lambda::Function")
     assert all(resource["Properties"].get("Runtime") != "python3.12" for resource in functions.values())
+
+
+def test_explicit_python_runtime_context_is_a_rollback_only_path() -> None:
+    app = cdk.App(context={"rust_runtime": False})
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+
+    functions = template.find_resources("AWS::Lambda::Function")
+    python_functions = [
+        resource for resource in functions.values()
+        if resource["Properties"].get("Handler") == "backcountry_sms.handler.lambda_handler"
+    ]
+    assert len(python_functions) == 1
+    assert all(resource["Properties"].get("Runtime") != "provided.al2023" for resource in functions.values())
 
 
 def test_dashboard_is_single_demo_dashboard_for_every_stack() -> None:

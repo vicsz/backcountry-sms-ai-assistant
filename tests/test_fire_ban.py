@@ -3,8 +3,12 @@ from pathlib import Path
 from statistics import quantiles
 from time import perf_counter
 
+import pytest
+
 from backcountry_sms import fire_ban, handler
 from backcountry_sms.models import LocationCandidate, LocationResolution
+
+pytestmark = pytest.mark.legacy_python_runtime
 
 FIXTURE = Path(__file__).parent / "fixtures" / "stage-9-2-fire-ban-snapshot.json"
 NOW = datetime(2026, 8, 21, 12, tzinfo=UTC)

@@ -6,6 +6,8 @@ import pytest
 
 from backcountry_sms.tracing import trace_span
 
+pytestmark = pytest.mark.legacy_python_runtime
+
 
 def test_trace_span_is_noop_without_otel_layer(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("backcountry_sms.tracing.trace", None)

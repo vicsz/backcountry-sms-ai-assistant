@@ -1,8 +1,7 @@
-//! Safe, compileable first slice of the Stage 11 Rust runtime migration.
+//! Rust request runtime for the Stage 11 application-runtime migration.
 //!
-//! The deterministic orchestration remains separate from the concrete AWS/HTTP adapters. The
-//! active deployed request path remains Python until the parity and cutover gates in the Stage 11
-//! specification pass.
+//! Deterministic orchestration remains separate from the concrete AWS/HTTP adapters. The Python
+//! modules remain support/evaluation code; the deployed Demo request path is Rust.
 
 pub mod adapters;
 pub mod domain;

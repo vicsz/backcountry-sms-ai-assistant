@@ -2,6 +2,10 @@
 
 Status: Partially implemented — offline evaluation capability
 
+The current live baseline is retained but not promoted: it lacks useful per-park/section metadata
+and does not reliably distinguish unsupported or unknown-park questions. Freshness, source-date
+handling, and recurring ingestion remain deferred and are outside this retrieval-tuning stage.
+
 ## Objective
 
 Evaluate whether the Stage 9.3.2 Bedrock Knowledge Base configuration retrieves the right

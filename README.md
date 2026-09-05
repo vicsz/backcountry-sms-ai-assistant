@@ -34,17 +34,20 @@ and [Messages via satellite documentation](https://support.apple.com/en-euro/gui
 ![Backcountry SMS AI Assistant AWS architecture](aws-architecture.png)
 
 The deployed core is a two-way SMS flow: satellite-enabled iPhone Messages reach AWS End User
-Messaging SMS, which publishes an inbound notification to Amazon SNS and invokes the Python Lambda
-orchestrator. Lambda uses short-lived DynamoDB SMS thread context, provider lookups, and Amazon
-Bedrock, then sends the reply directly through the AWS End User Messaging SMS API.
+Messaging SMS, which publishes an inbound notification to Amazon SNS and invokes the Rust Lambda
+orchestrator. The Python CDK remains the infrastructure deployment path. Rust uses short-lived
+DynamoDB SMS thread context, provider lookups, and Amazon Bedrock, then sends the reply directly
+through the AWS End User Messaging SMS API.
 
 The source-backed extensions add an Amazon Bedrock Knowledge Base backed by an Amazon S3 Vectors
 vector database over an S3-curated Ontario Parks corpus, plus versioned S3 fire-ban snapshots
 queried through Amazon Athena for geospatial lookups.
 
-The Knowledge Base, S3 Vectors, S3 ingestion, and Athena paths are local or proposed extensions
-pending their own deployment and live-verification gates. SNS is used for inbound notification;
-outbound SMS is sent directly by Lambda through the AWS End User Messaging SMS API.
+The Ontario Parks Knowledge Base, S3 Vectors, and one-time snapshot ingestion are deployed on the
+Demo target. Their freshness/source-date contract and recurring refresh remain deferred. The
+fire-ban S3/Athena ingestion path remains local/proposed pending its own live-ingestion gate. SNS
+is used for inbound notification; outbound SMS is sent directly by Lambda through the AWS End User
+Messaging SMS API.
 
 ## How I built it
 
@@ -114,10 +117,10 @@ failures. Live provider checks remain explicit and separate from ordinary CI.
 
 ## Model, performance, and cost decisions
 
-Production uses Amazon Nova 2 Lite because it is capable for this bounded workload and available in
-the production region. Nova Micro was compared through a separate test path: it was faster in the
-observed sample, but regional availability and unresolved quality confidence did not justify a
-production migration.
+The Demo target currently uses Amazon Nova Micro for its bounded capture/live checks. Nova 2 Lite
+remains the non-test CDK default, but this repository has no deployed production environment.
+Nova Micro was compared through a separate test path and was faster in the observed sample; the
+model choice remains environment-specific rather than a production migration claim.
 
 At approximately 100 short interactions per month, the variable AI and serverless workload is
 small. Total cost still depends on SMS origination/delivery, weather and location providers,
@@ -131,9 +134,10 @@ See the detailed [performance findings](docs/performance.md).
 ## Current status
 
 The core SMS, weather, context, observability, tracing, reliability, performance, evaluation, and
-carrier-independent test paths are deployed and verified. Fire-ban/geospatial and Ontario Parks RAG
-capabilities are implemented locally but remain subject to their own review, deployment, ingestion,
-and live-verification gates. The current assistant is allow-listed and intentionally narrow.
+carrier-independent test paths are deployed and verified. The Ontario Parks RAG snapshot is
+deployed and read-only verified, while fire-ban/geospatial ingestion remains deferred and the RAG
+freshness/source-date contract is not implemented. The current assistant is allow-listed and
+intentionally narrow.
 
 ## Further reading
 

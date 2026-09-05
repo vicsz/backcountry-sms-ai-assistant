@@ -8,6 +8,8 @@ from botocore.exceptions import ClientError
 
 from backcountry_sms import handler, retrieval
 
+pytestmark = pytest.mark.legacy_python_runtime
+
 
 def sns_event(sender: str, body: str = "tell me a joke", message_id: str = "test-message-id") -> dict:
     return {

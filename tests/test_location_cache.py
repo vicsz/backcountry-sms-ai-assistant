@@ -1,6 +1,10 @@
 """Unit coverage for the bounded successful-location cache."""
 
+import pytest
+
 from backcountry_sms import location
+
+pytestmark = pytest.mark.legacy_python_runtime
 
 
 def _candidate() -> location.LocationCandidate:

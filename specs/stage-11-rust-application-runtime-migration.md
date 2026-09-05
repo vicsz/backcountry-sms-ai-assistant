@@ -11,13 +11,12 @@ behavioral parity, deployment safety, and a useful measured comparison. This is 
 build migration, not a feature expansion. The existing user-visible behavior, provider boundaries,
 privacy controls, and SMS safety rules remain the contract.
 
-The final cutover may replace the current Python runtime on the project's normal deployed target
-only after the acceptance criteria and live gates in this specification pass. A failed comparison
-or incomplete gate stops the migration; it does not justify a partial deployed cutover.
+The following cutover procedure was the pre-cutover plan. It has now been completed for the Demo
+request path; the final record below supersedes the historical candidate wording.
 
-## Current baseline
+## Historical pre-cutover baseline
 
-The current application runtime is a Python 3.12 Lambda with a 25-second timeout, 128 MB memory,
+Historical pre-cutover baseline: the application runtime was a Python 3.12 Lambda with a 25-second timeout, 128 MB memory,
 active X-Ray tracing, the Python ADOT Lambda layer, and the existing SNS -> Lambda -> provider,
 Bedrock, DynamoDB, and SMS topology. The CDK definition packages the repository asset and points
 the function at `backcountry_sms.handler.lambda_handler`.
@@ -53,20 +52,21 @@ record the exact implementation commit and deployed function/version.
 
 Date: 2026-09-05
 
-The local candidate now includes concrete AWS/HTTP adapters for Bedrock Converse, Bedrock Knowledge
+The local Rust implementation now includes concrete AWS/HTTP adapters for Bedrock Converse, Bedrock Knowledge
 Base retrieval, DynamoDB, Amazon Location Places, Open-Meteo, and AWS End User Messaging SMS. It
 also includes explicit retry/timeout budgets, warm-process client reuse, deterministic interpretation
 grounding, provider fallback/ranking, bounded retrieval claim/citation handling, and redacted
 low-cardinality telemetry. Fire-ban ingestion remains deferred and the candidate returns an
 explicit unknown result with `ingestion_deferred`.
 
-The Rust contract suite currently has 15 passing integration tests and 3 passing adapter unit tests;
+The historical candidate record reported 15 passing integration tests and 3 passing adapter unit tests;
 formatting, offline checks, and clippy pass. `rust/Makefile` provides a locked release build and
 package path. The x86_64 Linux release artifact has been cross-built locally before the latest
 parity fixes at approximately 15.96 MB as a stripped ELF; it must be rebuilt after those fixes
-before deployment. CDK wiring is opt-in only: it creates a separate `provided.al2023` candidate
-function and context table, forces test/capture configuration, omits inbound SNS subscription and
-SMS permission, and leaves the Python Demo function active.
+before deployment. That candidate CDK wiring was opt-in: it created a separate `provided.al2023`
+function and context table, forced test/capture configuration, omitted inbound SNS subscription and
+SMS permission, and left the Python Demo function active. The completed cutover record below
+supersedes that candidate state.
 
 The candidate was deployed to the Demo stack on 2026-09-05 from the follow-up implementation
 commits. Live capture checks passed for GPS weather, named-place weather, context follow-up after a
@@ -80,7 +80,7 @@ comparison, Rust application-span verification, rollback drill, and Demo cutover
 below. The deployed request path is now Rust; `backcountry_sms/` remains only as retained Python
 support/evaluation code for safe rollback development and CDK imports, not as a deployed Lambda.
 
-## Controlled Demo canary record — 2026-09-05
+## Controlled Demo canary record — 2026-09-05 (historical pre-cutover)
 
 The isolated Rust candidate was exercised through direct synthetic invocations against the Demo
 `BackcountrySmsEchoTest` stack. It remained forced to `DEPLOYMENT_ENVIRONMENT=test`,
@@ -270,7 +270,7 @@ test must not mutate the normal live target.
 ### 4. Deployed Rust test verification
 
 Deploy the Rust candidate to a separately identified test function, alias, or test stack before
-changing the current Python function. Use the applicable demo target and capture mode first. A
+changing the then-current Python function. Use the applicable demo target and capture mode first. A
 successful Lambda invocation alone is insufficient; inspect redacted logs, metrics, and traces and
 confirm the captured response event and absent carrier-edge calls.
 

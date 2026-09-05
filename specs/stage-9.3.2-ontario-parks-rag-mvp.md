@@ -1,6 +1,7 @@
 # Stage 9.3.2 — Ontario provincial parks RAG MVP
 
-Status: Implemented locally; deployment, one explicit ingestion sync, and any redacted live retrieval smoke test remain opt-in.
+Status: Implemented as a one-time snapshot MVP; the deployed read-only baseline is retained, while
+freshness/source-date handling and recurring ingestion remain deferred.
 
 ## Objective
 
@@ -132,9 +133,10 @@ SMS-send code during unit tests.
 - Any live retrieval check is explicit, opt-in, redacted, and separate from unit tests.
 
 No scheduled ingestion, source polling, corpus refresh, park-page scraping, automatic data update,
-or freshness enforcement for time-sensitive park information is implemented by this stage. The
-one-time corpus and any retrieved hours or rental details must not be presented as continuously
-current.
+or freshness enforcement for time-sensitive park information is implemented by this stage. Hours,
+rentals, fees, operating dates, availability, closures, and similar facts from the one-time corpus
+must not be presented as current without a later source-date/freshness contract. Ingestion and
+refresh are deferred alongside the fire-ban ingestion work.
 
 ## Implementation record
 
@@ -152,6 +154,12 @@ current.
 - A response is sent only when it has usable source metadata and passes conservative grounding and
   current-status checks. Structured contradictory claims for the same park and section return the
   deterministic uncertainty fallback rather than model prose.
+
+The live baseline characterization found that returned records still expose generic corpus metadata
+and that unsupported or unknown-park questions can receive generic hits. Those results are not
+promotion evidence. A later RAG-quality change must add usable park/section metadata, demonstrate
+negative-query exclusion, and evaluate answer citation/grounding independently before changing the
+deployed configuration.
 
 ## Acceptance criteria and non-goals
 

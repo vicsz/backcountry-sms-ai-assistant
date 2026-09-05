@@ -48,7 +48,16 @@ class BackcountrySmsAssistantStack(Stack):
 
         rust_candidate_enabled = context_flag("rust_candidate")
         python_capture_enabled = context_flag("python_capture")
-        rust_runtime_enabled = context_flag("rust_runtime")
+        rust_runtime_context = self.node.try_get_context("rust_runtime")
+        if rust_runtime_context is None:
+            # The only deployed target is the Demo stack, so make the accepted Rust
+            # runtime the safe default there. Candidate/capture contexts remain
+            # isolated unless the caller explicitly selects the primary runtime.
+            rust_runtime_enabled = is_test_stack and not (
+                rust_candidate_enabled or python_capture_enabled
+            )
+        else:
+            rust_runtime_enabled = context_flag("rust_runtime")
         if (rust_candidate_enabled or python_capture_enabled or rust_runtime_enabled) and not is_test_stack:
             raise ValueError("candidate capture and runtime targets are restricted to BackcountrySmsEchoTest")
         if rust_candidate_enabled and rust_runtime_enabled:

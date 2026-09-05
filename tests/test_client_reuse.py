@@ -6,6 +6,8 @@ import pytest
 
 from backcountry_sms import bedrock, context_store, handler, location
 
+pytestmark = pytest.mark.legacy_python_runtime
+
 
 @pytest.mark.parametrize(
     ("factory", "module", "service"),

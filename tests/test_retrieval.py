@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from botocore.exceptions import ReadTimeoutError
 
 from backcountry_sms.retrieval import (
@@ -23,6 +24,8 @@ from scripts.retrieval_eval import (
     evaluate,
     retrieve,
 )
+
+pytestmark = pytest.mark.legacy_python_runtime
 
 
 def result(park: str = "Arrowhead", excerpt: str = "Arrowhead lists canoe rentals and a boat launch.", score: float = 0.9) -> RetrievalResult:

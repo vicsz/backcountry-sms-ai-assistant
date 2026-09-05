@@ -1,6 +1,6 @@
 # Stage 11 Rust runtime slice
 
-This directory contains the local Rust candidate for the Stage 11 migration. The `bootstrap`
+This directory contains the Rust request runtime for the Stage 11 migration. The `bootstrap`
 binary uses the AWS Lambda Rust runtime and the deterministic orchestration plus concrete AWS/HTTP
 adapters implement:
 
@@ -41,9 +41,9 @@ asset at `dist/bootstrap`. On Apple Silicon, a Linux cross-linker such as Zig ma
 the package can be built with `BUILD_CMD='cargo zigbuild' make package` when
 `cargo-zigbuild` is installed.
 
-The Python CDK remains the active infrastructure deployment path. Setting the CDK context
-`rust_candidate=true` adds an isolated `provided.al2023` candidate function to the Demo test stack;
+The Python CDK remains the infrastructure deployment path. The Demo test stack defaults to the Rust
+request Lambda and points inbound SNS at it. `rust_runtime=false` is the explicit Python rollback
+path. Setting `rust_candidate=true` instead adds an isolated `provided.al2023` candidate function;
 it is capture-only, has no inbound SNS subscription, uses a separate context table, and has no SMS
-permission. Setting `rust_runtime=true` makes Rust the only deployed request Lambda and points the
-inbound SNS subscription at it; the Stage 11 specification records the completed parity, capture,
-measurement, review, rollback, and cutover gates.
+permission. The Stage 11 specification records the completed parity, capture, measurement, review,
+rollback, and cutover gates.
