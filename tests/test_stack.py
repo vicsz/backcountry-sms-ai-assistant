@@ -214,7 +214,7 @@ def test_candidate_capture_targets_are_restricted_to_demo_stack() -> None:
             BackcountrySmsAssistantStack(app, "BackcountrySmsEcho")
 
 
-def test_rust_runtime_switches_primary_subscription_and_preserves_python_rollback() -> None:
+def test_rust_runtime_switches_primary_subscription_and_removes_python_request_lambda() -> None:
     app = cdk.App(context={"rust_runtime": True})
     template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
 
@@ -227,7 +227,7 @@ def test_rust_runtime_switches_primary_subscription_and_preserves_python_rollbac
         resource for resource in functions.values()
         if resource["Properties"].get("Runtime") == "provided.al2023"
     ]
-    assert len(python_functions) == 1
+    assert len(python_functions) == 0
     assert len(rust_functions) == 1
     rust = rust_functions[0]["Properties"]
     assert rust["Handler"] == "bootstrap"
@@ -244,6 +244,13 @@ def test_rust_runtime_switches_primary_subscription_and_preserves_python_rollbac
         if "RustRuntimeFunctionServiceRole" in json.dumps(resource)
     )
     assert "sms-voice:SendTextMessage" in rust_policy_text
+
+
+def test_rust_runtime_template_contains_no_python_request_lambda() -> None:
+    app = cdk.App(context={"rust_runtime": True})
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+    functions = template.find_resources("AWS::Lambda::Function")
+    assert all(resource["Properties"].get("Runtime") != "python3.12" for resource in functions.values())
 
 
 def test_dashboard_is_single_demo_dashboard_for_every_stack() -> None:
