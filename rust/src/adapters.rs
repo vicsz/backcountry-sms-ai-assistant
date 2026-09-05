@@ -90,6 +90,8 @@ pub trait ContextStore {
         &mut self,
         sender: &str,
         message_id: &str,
+        created_at: &str,
+        input: &str,
         output: &str,
     ) -> Result<(), AdapterError>;
 }

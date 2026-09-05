@@ -13,8 +13,8 @@ observability, safe fallbacks, and explicit testing boundaries.
 
 There are no uncommitted Stage 9.2/9.3.2 runtime changes. That work is represented in the
 repository at the evidence states below. Stage 10 and Stage 9.2.1 remain documentation-only;
-Stage 11 has a local Rust safety/runtime slice, but it is not wired to AWS, packaged as a candidate
-Lambda, or deployed.
+Stage 11 has a local Rust candidate with concrete adapters and isolated opt-in CDK wiring, but it
+has not been deployed or live-verified.
 
 Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed and verified on the
 dedicated demo capture stack; this is the project's only deployed environment.
@@ -59,7 +59,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Stage 9.4 — runtime configuration via Parameter Store | Proposed; design only |
 | Stage 10 — AI invocation boundary | Proposed; specification only |
 | Stage 10.1 — baseline application guardrails | Proposed; specification only |
-| Stage 11 — Rust application runtime migration | Partially implemented locally: compileable Rust bootstrap/event, policy, typed-model, GSM-7, and adapter-seam slice; Python remains the deployed implementation and no parity/cutover/live gates have passed |
+| Stage 11 — Rust application runtime migration | Partially implemented locally: concrete Rust adapters, 18 passing Rust tests, locked package path, and isolated capture-only candidate definition; Python remains the deployed implementation and no candidate parity/cutover/live gates have passed |
 | Multi-channel support and generalized autonomous-agent behavior | Deferred; outside the current release boundary |
 
 ## Operational controls already present
@@ -74,8 +74,10 @@ dedicated demo capture stack; this is the project's only deployed environment.
 
 ## Current next actions
 
-1. Stop feature expansion and define the portfolio release boundary.
-2. Review and decide whether to implement the proposed Stage 11 Rust migration.
-3. Rewrite the README and create publication-safe AWS architecture and operations diagrams.
-4. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
+1. Validate the isolated Rust candidate locally, then deploy it to the Demo capture target for the
+   required redacted capture/provider gates.
+2. Run the matched Python-versus-Rust measurement and record only the reviewed aggregate.
+3. Keep Python active unless every Stage 11 parity, rollback, and observation gate passes.
+4. Rewrite the README and create publication-safe AWS architecture and operations diagrams.
+5. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
    commit.

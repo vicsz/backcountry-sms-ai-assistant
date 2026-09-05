@@ -2,7 +2,9 @@ use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use serde_json::{json, Value};
 
 async fn handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
-    let response = backcountry_runtime::runtime::handle_event_from_env(&event.payload)?;
+    let response = backcountry_runtime::runtime::handle_event_from_env_async(&event.payload)
+        .await
+        .map_err(std::io::Error::other)?;
     Ok(json!(response))
 }
 

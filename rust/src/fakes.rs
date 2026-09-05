@@ -78,6 +78,8 @@ impl ContextStore for ScriptedContext {
         &mut self,
         _sender: &str,
         _message_id: &str,
+        _created_at: &str,
+        _input: &str,
         _output: &str,
     ) -> Result<(), AdapterError> {
         self.log.record("context_complete");

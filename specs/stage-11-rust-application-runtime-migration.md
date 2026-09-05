@@ -1,8 +1,9 @@
 # Stage 11 — Rust application runtime migration
 
-**Status:** Partially implemented locally; compileable Rust safety/runtime slice only. The Python
-runtime remains the deployed oracle; provider parity, capture-matrix verification, packaging into a
-candidate Lambda, measurement, review, live gates, and cutover remain outstanding.
+**Status:** Partially implemented locally. The Rust candidate has concrete provider adapters,
+offline contract coverage, a reproducible package target, and opt-in isolated CDK wiring. The
+Python runtime remains the deployed oracle; candidate deployment, parity comparison, measurement,
+review, live gates, and cutover remain outstanding.
 
 ## Objective
 
@@ -53,17 +54,24 @@ record the exact implementation commit and deployed function/version.
 
 Date: 2026-09-05
 
-The first local slice implements nested event parsing, sender and capture guards, typed
-interpretation validation, deterministic routing, provider-result safety checks, weather/fire-ban/
-retrieval orchestration through injected adapter traits, GSM-7 output bounding, and deterministic
-fakes. It has 14 passing Rust integration tests and passes formatting and clippy checks offline.
-The Python runtime and CDK remain unchanged in the deployed request path.
+The local candidate now includes concrete AWS/HTTP adapters for Bedrock Converse, Bedrock Knowledge
+Base retrieval, DynamoDB, Amazon Location Places, Open-Meteo, and AWS End User Messaging SMS. It
+also includes explicit retry/timeout budgets, warm-process client reuse, deterministic interpretation
+grounding, provider fallback/ranking, bounded retrieval claim/citation handling, and redacted
+low-cardinality telemetry. Fire-ban ingestion remains deferred and the candidate returns an
+explicit unknown result with `ingestion_deferred`.
 
-The AWS/HTTP adapter wiring was attempted but not completed: the build environment could not resolve
-the crates.io registry, and no adapter implementation landed. The local Homebrew Rust toolchain also
-does not provide the pinned Linux target without rustup/target installation. Accordingly, no
-cross-compiled Lambda package, deployed candidate, Python/Rust parity run, or Rust performance
-comparison is claimed here.
+The Rust contract suite currently has 15 passing integration tests and 3 passing adapter unit tests;
+formatting, offline checks, and clippy pass. `rust/Makefile` provides a locked release build and
+package path. The x86_64 Linux release artifact has been cross-built locally before the latest
+parity fixes at approximately 15.96 MB as a stripped ELF; it must be rebuilt after those fixes
+before deployment. CDK wiring is opt-in only: it creates a separate `provided.al2023` candidate
+function and context table, forces test/capture configuration, omits inbound SNS subscription and
+SMS permission, and leaves the Python Demo function active.
+
+No candidate deployment, deployed provider/Bedrock verification, Python/Rust parity run, or
+performance comparison is claimed yet. The Python runtime remains the deployed oracle and normal
+request path.
 
 ## Decision boundary
 

@@ -1,6 +1,7 @@
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::fmt;
+use std::{fmt, sync::OnceLock};
 
 pub const DEFAULT_MODEL_ID: &str = "us.amazon.nova-2-lite-v1:0";
 pub const NOVA_MICRO_MODEL_ID: &str = "us.amazon.nova-micro-v1:0";
@@ -182,6 +183,217 @@ pub fn parse_interpretation(output: &str) -> Result<Interpretation, ModelOutputE
         .ok_or(ModelOutputError::InvalidJson)?;
     let object = value.as_object().ok_or(ModelOutputError::NotObject)?;
     parse_interpretation_object(object)
+}
+
+/// Apply the deterministic grounding rules that follow model interpretation in the Python oracle.
+/// The model may extract a candidate, but it is never allowed to authorize a location or
+/// coordinate that is not grounded in the current SMS or readable sender history.
+pub fn normalize_interpretation(
+    mut interpretation: Interpretation,
+    current_sms: &str,
+    history: &[ContextInteraction],
+) -> Option<Interpretation> {
+    if interpretation.location_source == "history"
+        && crate::domain::parse_coordinates(current_sms).is_none()
+    {
+        interpretation.coordinates = None;
+    }
+    if crate::domain::parse_coordinates(current_sms).is_some() {
+        interpretation.location_source = "current".into();
+    }
+
+    let mut location = short_ascii(interpretation.location_text.as_deref().unwrap_or_default());
+    let mut current_location = short_ascii(&interpretation.current_location_text);
+    let history_location = newest_history_location(history);
+
+    if interpretation.location_source == "current"
+        && !current_location.is_empty()
+        && !contains_case_insensitive(current_sms, &current_location)
+    {
+        let candidate_location = canonical_history_location(&location, history);
+        let candidate_current = canonical_history_location(&current_location, history);
+        if !history_location.is_empty()
+            && (history_location_is_grounded(&candidate_location, history)
+                || history_location_is_grounded(&candidate_current, history))
+        {
+            interpretation.location_source = "history".into();
+            location = if history_location_is_grounded(&candidate_location, history) {
+                candidate_location
+            } else {
+                candidate_current
+            };
+            current_location.clear();
+        }
+    }
+    if interpretation.location_source == "current"
+        && !location.is_empty()
+        && !current_location.is_empty()
+        && !contains_case_insensitive(current_sms, &current_location)
+        && history_location_is_grounded(&location, history)
+    {
+        interpretation.location_source = "history".into();
+        current_location.clear();
+    }
+    if interpretation.location_source == "current"
+        && interpretation.coordinates.is_none()
+        && !current_location.is_empty()
+        && !contains_case_insensitive(current_sms, &current_location)
+    {
+        return None;
+    }
+    if interpretation.location_source == "history" {
+        location = canonical_history_location(&location, history);
+        if is_deictic_location(&location) {
+            location = history_location.clone();
+        }
+    }
+    if interpretation.intent != "information_lookup"
+        && interpretation.location_source == "current"
+        && !location.is_empty()
+        && current_location.is_empty()
+        && contains_case_insensitive(current_sms, &location)
+    {
+        current_location = location.clone();
+    }
+
+    if interpretation.intent != "information_lookup"
+        && !location.is_empty()
+        && interpretation.coordinates.is_none()
+    {
+        match interpretation.location_source.as_str() {
+            "none" => return None,
+            "current" if current_location.is_empty() || location != current_location => {
+                return None
+            }
+            "history" if !history_location_is_grounded(&location, history) => return None,
+            _ => {}
+        }
+    }
+    if interpretation.intent != "information_lookup"
+        && !current_location.is_empty()
+        && (interpretation.location_source != "current" || location != current_location)
+    {
+        return None;
+    }
+
+    interpretation.location_text = if location.is_empty() {
+        None
+    } else {
+        Some(location)
+    };
+    interpretation.current_location_text = current_location;
+    interpretation.time_window = if contains_case_insensitive(current_sms, "now")
+        || contains_case_insensitive(current_sms, "right now")
+        || contains_case_insensitive(current_sms, "currently")
+    {
+        "now".into()
+    } else {
+        short_ascii(&interpretation.time_window)
+    };
+    interpretation.activity = short_ascii(&interpretation.activity);
+    if interpretation.time_window.is_empty() {
+        interpretation.time_window = "today".into();
+    }
+    if interpretation.activity.is_empty() {
+        interpretation.activity = "general".into();
+    }
+    Some(interpretation)
+}
+
+fn short_ascii(value: &str) -> String {
+    crate::gsm7::bound_sms(&value.chars().take(48).collect::<String>(), "")
+}
+
+fn contains_case_insensitive(text: &str, needle: &str) -> bool {
+    !needle.is_empty()
+        && text
+            .to_ascii_lowercase()
+            .contains(&needle.to_ascii_lowercase())
+}
+
+fn history_locations(text: &str) -> Vec<String> {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    let pattern =
+        PATTERN.get_or_init(|| Regex::new(r"\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})*\b").unwrap());
+    pattern
+        .find_iter(text)
+        .map(|value| value.as_str().to_owned())
+        .filter(|value| {
+            !matches!(
+                value.to_ascii_lowercase().as_str(),
+                "weather"
+                    | "forecast"
+                    | "today"
+                    | "tomorrow"
+                    | "tonight"
+                    | "please"
+                    | "can"
+                    | "could"
+                    | "what"
+                    | "when"
+            )
+        })
+        .collect()
+}
+
+fn newest_history_location(history: &[ContextInteraction]) -> String {
+    history
+        .iter()
+        .rev()
+        .flat_map(|item| {
+            history_locations(&item.input_body)
+                .into_iter()
+                .chain(history_locations(&item.output_body))
+        })
+        .max_by_key(String::len)
+        .unwrap_or_default()
+}
+
+fn history_location_is_grounded(location: &str, history: &[ContextInteraction]) -> bool {
+    !location.is_empty()
+        && history.iter().rev().any(|item| {
+            contains_case_insensitive(&item.input_body, location)
+                || history_locations(&item.input_body)
+                    .into_iter()
+                    .chain(history_locations(&item.output_body))
+                    .any(|label| label.eq_ignore_ascii_case(location))
+        })
+}
+
+fn canonical_history_location(location: &str, history: &[ContextInteraction]) -> String {
+    history_locations_from_context(history)
+        .into_iter()
+        .filter(|candidate| contains_case_insensitive(location, candidate))
+        .max_by_key(String::len)
+        .unwrap_or_else(|| location.to_owned())
+}
+
+fn history_locations_from_context(history: &[ContextInteraction]) -> Vec<String> {
+    history
+        .iter()
+        .flat_map(|item| {
+            history_locations(&item.input_body)
+                .into_iter()
+                .chain(history_locations(&item.output_body))
+        })
+        .collect()
+}
+
+fn is_deictic_location(value: &str) -> bool {
+    matches!(
+        value.to_ascii_lowercase().as_str(),
+        "here"
+            | "there"
+            | "this lake"
+            | "that lake"
+            | "the lake"
+            | "this park"
+            | "that park"
+            | "the park"
+            | "this place"
+            | "that place"
+            | "the place"
+    )
 }
 
 fn parse_interpretation_object(

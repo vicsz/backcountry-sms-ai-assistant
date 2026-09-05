@@ -5,7 +5,7 @@ use crate::{
     policy::{sender_allowed, DeliveryConfig},
 };
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::{collections::BTreeMap, env};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -43,13 +43,55 @@ fn emit(
     provider: Option<&str>,
     intent: Option<&str>,
 ) {
+    let mut metrics = BTreeMap::new();
+    match event {
+        "adapter_call" => match outcome {
+            Some("interpretation")
+            | Some("general")
+            | Some("clarification")
+            | Some("location_request")
+            | Some("coordinate_correction")
+            | Some("weather_unavailable")
+            | Some("weather_advice")
+            | Some("rag_response") => {
+                metrics.insert("BedrockCalls".into(), 1.0);
+            }
+            Some("retrieval") => {
+                metrics.insert("RetrievalCalls".into(), 1.0);
+            }
+            Some("weather") => {
+                metrics.insert("WeatherCalls".into(), 1.0);
+            }
+            _ => {}
+        },
+        "bedrock_failure" => {
+            metrics.insert("BedrockFailures".into(), 1.0);
+        }
+        "context_read" if status == "failure" => {
+            metrics.insert("ContextReadFailures".into(), 1.0);
+        }
+        "context_write" if status == "failure" => {
+            metrics.insert("ContextWriteFailures".into(), 1.0);
+        }
+        "sms_send_failed" => {
+            metrics.insert("SmsSendFailures".into(), 1.0);
+        }
+        "sms_ignored" => {
+            metrics.insert("MessagesIgnored".into(), 1.0);
+        }
+        "sms_replied" => {
+            metrics.insert("MessagesReceived".into(), 1.0);
+            metrics.insert("RepliesSent".into(), 1.0);
+        }
+        _ => {}
+    }
     services.telemetry.emit(TelemetryEvent {
         event: event.into(),
         status: status.into(),
         provider: provider.map(str::to_owned),
         intent: intent.map(str::to_owned),
         outcome: outcome.map(str::to_owned),
-        metrics: BTreeMap::new(),
+        metrics,
     });
 }
 
@@ -75,6 +117,14 @@ pub fn handle_event(
         return RuntimeResponse::ignored("unsupported_event");
     };
     if !sender_allowed(&message, allowed_phone) {
+        emit(
+            services,
+            "sms_ignored",
+            "ignored",
+            Some("sender_not_allowed"),
+            None,
+            None,
+        );
         return RuntimeResponse::ignored("sender_not_allowed");
     }
 
@@ -191,9 +241,13 @@ pub fn handle_event(
                 );
             }
         };
-        let interpretation = match crate::models::parse_interpretation(&interpretation_text) {
-            Ok(value) => value,
-            Err(_) => {
+        let interpretation = match crate::models::parse_interpretation(&interpretation_text)
+            .ok()
+            .and_then(|value| {
+                crate::models::normalize_interpretation(value, &message.message_body, &load.history)
+            }) {
+            Some(value) => value,
+            None => {
                 emit(
                     services,
                     "bedrock_failure",
@@ -405,20 +459,31 @@ fn weather_at(
     } else {
         None
     };
-    let evidence = Some(domain::weather_evidence(
-        &label,
-        coordinates,
-        &selected,
-        &guidance,
-        fire.as_ref(),
-    ));
-    let mut advice = bounded_model(
+    let advice_input = json!({
+        "inbound_sms": text,
+        "location": {
+            "label": label,
+            "coordinates": {
+                "latitude": coordinates.latitude,
+                "longitude": coordinates.longitude,
+            }
+        },
+        "weather": &selected,
+        "guidance": &guidance,
+        "activity": &interpretation.activity,
+        "time_window": &interpretation.time_window,
+        "fire_ban": fire.as_ref(),
+    })
+    .to_string();
+    let mut advice = bounded_model_at(
         services,
         ModelOperation::Advice,
-        text,
+        &advice_input,
         history,
-        evidence,
+        None,
         domain::WEATHER_ADVICE_FALLBACK,
+        96,
+        0.2,
     );
     if domain::contains_absolute_safety_claim(&advice)
         || domain::contains_stale_history_location(&advice, history, &label)
@@ -511,13 +576,32 @@ fn information_lookup(
     if !domain::usable_retrieval(&results) {
         return domain::RAG_UNUSABLE.into();
     }
-    let answer = bounded_model(
+    let evidence = results
+        .iter()
+        .map(|item| {
+            json!({
+                "excerpt": item.excerpt,
+                "park_name": item.citation.park_name,
+                "section": item.citation.section,
+                "source_url": item.citation.source_url,
+                "source_label": item.citation.source_label,
+            })
+        })
+        .collect::<Vec<_>>();
+    let rag_input = json!({
+        "question": text.chars().take(160).collect::<String>(),
+        "excerpts": evidence,
+    })
+    .to_string();
+    let answer = bounded_model_at(
         services,
         ModelOperation::RagResponse,
-        text,
+        &rag_input,
         history,
-        Some(domain::retrieval_evidence(&results)),
+        None,
         domain::RAG_RESPONSE_FAILURE,
+        96,
+        0.0,
     );
     if !domain::safe_rag_answer(&answer, &results) {
         return domain::RAG_UNUSABLE.into();
@@ -538,9 +622,30 @@ fn bounded_model(
     evidence: Option<String>,
     fallback: &str,
 ) -> String {
+    bounded_model_at(
+        services, operation, text, history, evidence, fallback, 96, 0.0,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn bounded_model_at(
+    services: &mut Services,
+    operation: ModelOperation,
+    text: &str,
+    history: &[crate::models::ContextInteraction],
+    evidence: Option<String>,
+    fallback: &str,
+    max_tokens: u16,
+    temperature: f32,
+) -> String {
     adapter_call(services, operation.as_str(), "bedrock");
     match services.model.converse(domain::model_request(
-        operation, text, history, evidence, 96, 0.0,
+        operation,
+        text,
+        history,
+        evidence,
+        max_tokens,
+        temperature,
     )) {
         Ok(value) => domain::bound_sms(&value, fallback),
         Err(_) => fallback.into(),
@@ -581,10 +686,17 @@ fn finish(
             );
         }
     }
+    emit(services, "sms_replied", "success", None, None, None);
     adapter_call(services, "context_complete", "dynamodb");
     if services
         .context
-        .complete(sender, &message.message_id, &response)
+        .complete(
+            sender,
+            &message.message_id,
+            _created_at,
+            &message.message_body,
+            &response,
+        )
         .is_err()
     {
         emit(
@@ -632,9 +744,9 @@ fn failed(
     }
 }
 
-pub fn handle_event_from_env(
-    event: &Value,
-) -> Result<RuntimeResponse, crate::policy::DeliveryConfigError> {
+/// Production Lambda entry point: create concrete adapters once for the invocation and pass them
+/// into the same deterministic orchestration used by the capture fakes.
+pub async fn handle_event_from_env_async(event: &Value) -> Result<RuntimeResponse, String> {
     let Some(message) = parse_sns_event(event) else {
         return Ok(RuntimeResponse::ignored("unsupported_event"));
     };
@@ -642,15 +754,14 @@ pub fn handle_event_from_env(
     if !sender_allowed(&message, allowed_phone.as_deref()) {
         return Ok(RuntimeResponse::ignored("sender_not_allowed"));
     }
-    let config = DeliveryConfig::from_env()?;
-    Ok(RuntimeResponse {
-        status: "failed".into(),
-        reason: Some("adapters_not_wired".into()),
-        delivery_mode: Some(config.delivery_mode),
-        response: None,
-        location_source: None,
-        call_counts: BTreeMap::new(),
-        sms_api_called: false,
-        sns_published: false,
-    })
+    let config = DeliveryConfig::from_env().map_err(|error| error.to_string())?;
+    let mut services = crate::production::services_from_env()
+        .await
+        .map_err(|error| error.category)?;
+    Ok(handle_event(
+        event,
+        &config,
+        allowed_phone.as_deref(),
+        &mut services,
+    ))
 }

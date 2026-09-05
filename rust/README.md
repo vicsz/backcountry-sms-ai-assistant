@@ -1,8 +1,8 @@
 # Stage 11 Rust runtime slice
 
-This directory contains the compileable local capture slice of the Stage 11 migration. The
-`bootstrap` binary uses the AWS Lambda Rust runtime and the injected orchestration currently
-implements:
+This directory contains the local Rust candidate for the Stage 11 migration. The `bootstrap`
+binary uses the AWS Lambda Rust runtime and the deterministic orchestration plus concrete AWS/HTTP
+adapters implement:
 
 - nested SNS/provider event parsing;
 - allow-list normalization and fail-closed delivery configuration;
@@ -11,11 +11,17 @@ implements:
 - deterministic general/weather/information-lookup/fire-status routing;
 - retrieval citation and grounding guards;
 - fire-ban snapshot freshness and validated WKT polygon/multipolygon membership;
-- side-effect adapter traits, bounded timeout/retry configuration, and deterministic fakes.
+- side-effect adapter traits, bounded timeout/retry configuration, warm-process client reuse, and
+  deterministic fakes;
+- Bedrock Converse, Bedrock Knowledge Base retrieval, DynamoDB, Amazon Location Places, Open-Meteo,
+  and AWS End User Messaging SMS adapters;
+- redacted low-cardinality JSON/CloudWatch EMF telemetry.
 
 The local capture harness injects deterministic fakes and records logical calls. It does not call
 Bedrock, HTTP providers, DynamoDB, retrieval, Athena, SNS, or SMS. The active Python Lambda remains
-the oracle and deployed request path until parity and cutover gates pass.
+the oracle and deployed request path until parity and cutover gates pass. Fire-ban ingestion is
+explicitly deferred; the Rust candidate reports unknown with `ingestion_deferred` rather than
+claiming live status.
 
 ## Local checks
 
@@ -25,12 +31,16 @@ From this directory:
 make fmt
 make test
 make clippy
+make package
 ```
 
 The Lambda package target is `x86_64-unknown-linux-gnu`, matching the existing CDK default
-architecture. `rust-toolchain.toml` pins the compiler and target for a rustup-enabled Linux build;
-the local Homebrew toolchain can still run host tests but cannot install that target by itself.
+architecture. `rust-toolchain.toml` pins the compiler and target. `make package` creates the
+reproducible locked release package at `target/package/backcountry-rust-runtime.zip` and the CDK candidate
+asset at `dist/bootstrap`; the local macOS build may require a Linux cross-linker such as Zig.
 
-The Python CDK remains unchanged in this slice. Wiring this package into a separately identified
-candidate function requires concrete AWS/HTTP adapter implementations and the capture/deployed
-parity gates; replacing the active Python asset would violate the Stage 11 cutover gates.
+The Python CDK remains the active deployment path. Setting the CDK context
+`rust_candidate=true` adds an isolated `provided.al2023` candidate function to the Demo test stack;
+it is capture-only, has no inbound SNS subscription, uses a separate context table, and has no SMS
+permission. Replacing the active Python asset requires the parity, deployed capture, measurement,
+review, and rollback gates in the Stage 11 specification.

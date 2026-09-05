@@ -125,6 +125,42 @@ fn interpretation_schema_is_strict_and_coordinates_are_provider_safe() {
 }
 
 #[test]
+fn interpretation_normalization_requires_grounded_current_or_history_locations() {
+    let history = vec![backcountry_runtime::models::ContextInteraction {
+        input_body: "Weather in Pine Ridge".into(),
+        output_body: "Pine Ridge: 12C and clear.".into(),
+        created_at: "2026-09-05T11:00#old".into(),
+    }];
+    let follow_up = backcountry_runtime::models::parse_interpretation(&interpretation(
+        "weather",
+        Some("Pine Ridge"),
+        None,
+        "current",
+    ))
+    .unwrap();
+    let normalized = backcountry_runtime::models::normalize_interpretation(
+        follow_up,
+        "What about tomorrow?",
+        &history,
+    )
+    .unwrap();
+    assert_eq!(normalized.location_source, "history");
+    assert_eq!(normalized.location_text.as_deref(), Some("Pine Ridge"));
+    assert!(backcountry_runtime::models::normalize_interpretation(
+        backcountry_runtime::models::parse_interpretation(&interpretation(
+            "weather",
+            Some("Unknown Place"),
+            None,
+            "current",
+        ))
+        .unwrap(),
+        "What about tomorrow?",
+        &history,
+    )
+    .is_none());
+}
+
+#[test]
 fn gsm7_replacement_and_extended_character_cost_stay_within_one_segment() {
     assert_eq!(
         bound_sms("smart ‘quotes’ – degree °", "fallback"),

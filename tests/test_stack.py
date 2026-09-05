@@ -152,6 +152,26 @@ def test_dedicated_test_stack_defaults_to_nova_micro() -> None:
     template.has_parameter("BedrockModelId", {"Default": NOVA_MICRO_MODEL_ID})
 
 
+def test_rust_candidate_is_opt_in_and_not_subscribed_to_inbound_sns() -> None:
+    app = cdk.App(context={"rust_candidate": True})
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+
+    template.has_resource_properties(
+        "AWS::Lambda::Function",
+        {
+            "Handler": "bootstrap",
+            "Runtime": "provided.al2023",
+            "Architectures": ["x86_64"],
+            "Timeout": 25,
+            "MemorySize": 128,
+            "TracingConfig": {"Mode": "Active"},
+        },
+    )
+    subscriptions = template.find_resources("AWS::SNS::Subscription")
+    candidate_text = json.dumps(subscriptions)
+    assert "RustCandidateFunction" not in candidate_text
+
+
 def test_dashboard_is_single_demo_dashboard_for_every_stack() -> None:
     production_app = cdk.App()
     production_template = Template.from_stack(

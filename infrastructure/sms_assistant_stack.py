@@ -2,6 +2,7 @@
 
 import hashlib
 from pathlib import Path
+from typing import Any, cast
 
 import aws_cdk as cdk
 from aws_cdk import (
@@ -38,9 +39,12 @@ from backcountry_sms.models import (
 class BackcountrySmsAssistantStack(Stack):
     """Keep the existing SMS topology and add the bounded Bedrock runtime permission."""
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs: object) -> None:
+    def __init__(self, scope: Construct, construct_id: str, **kwargs: Any) -> None:
         super().__init__(scope, construct_id, **kwargs)
         is_test_stack = construct_id == "BackcountrySmsEchoTest"
+        rust_candidate_enabled = self.node.try_get_context("rust_candidate") is True
+        if rust_candidate_enabled and not is_test_stack:
+            raise ValueError("rust_candidate is restricted to BackcountrySmsEchoTest")
         Tags.of(self).add("Project", "backcountry-sms-ai-assistant")
         Tags.of(self).add("Stage", "5-message-context")
         Tags.of(self).add("ManagedBy", "aws-cdk")
@@ -169,6 +173,18 @@ class BackcountrySmsAssistantStack(Stack):
             encryption=dynamodb.TableEncryption.AWS_MANAGED,
             time_to_live_attribute="ttl",
         )
+        rust_context = None
+        if rust_candidate_enabled:
+            rust_context = dynamodb.Table(
+                self,
+                "RustCandidateMessageContext",
+                partition_key=dynamodb.Attribute(name="user_phone_e164", type=dynamodb.AttributeType.STRING),
+                sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
+                billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+                encryption=dynamodb.TableEncryption.AWS_MANAGED,
+                time_to_live_attribute="ttl",
+                removal_policy=RemovalPolicy.RETAIN,
+            )
         corpus_bucket = s3.Bucket(
             self,
             "OntarioParksGuideCorpus",
@@ -301,7 +317,18 @@ class BackcountrySmsAssistantStack(Stack):
             handler="backcountry_sms.handler.lambda_handler",
             code=lambda_.Code.from_asset(
                 ".",
-                exclude=[".git", ".venv", "cdk.out", "tests", "local"],
+                exclude=[
+                    ".git",
+                    ".venv",
+                    "cdk.out",
+                    ".mypy_cache",
+                    ".pytest_cache",
+                    ".ruff_cache",
+                    "rust/target",
+                    "rust/dist",
+                    "tests",
+                    "local",
+                ],
             ),
             # Named requests add one bounded geospatial lookup before the Stage 3 weather path.
             timeout=Duration.seconds(25),
@@ -325,6 +352,43 @@ class BackcountrySmsAssistantStack(Stack):
             },
             log_group=log_group,
         )
+        rust_function = None
+        if rust_candidate_enabled:
+            assert rust_context is not None
+            rust_log_group = logs.LogGroup(
+                self,
+                "RustCandidateFunctionLogGroup",
+                retention=logs.RetentionDays.TWO_WEEKS,
+                removal_policy=RemovalPolicy.RETAIN,
+            )
+            rust_function = lambda_.Function(
+                self,
+                "RustCandidateFunction",
+                runtime=lambda_.Runtime.PROVIDED_AL2023,
+                handler="bootstrap",
+                code=lambda_.Code.from_asset("rust/dist"),
+                architecture=lambda_.Architecture.X86_64,
+                timeout=Duration.seconds(25),
+                memory_size=128,
+                tracing=lambda_.Tracing.ACTIVE,
+                environment={
+                    "ALLOWED_PHONE_NUMBER": allowed_phone_number.value_as_string,
+                    "ORIGINATION_IDENTITY": origination_identity.value_as_string,
+                    "BEDROCK_MODEL_ID": bedrock_model_id.value_as_string,
+                    "MESSAGE_CONTEXT_TABLE": rust_context.table_name,
+                    "DEPLOYMENT_ENVIRONMENT": "test",
+                    "TEST_MODE": "true",
+                    "SMS_DELIVERY_MODE": "capture",
+                    "RAG_KNOWLEDGE_BASE_ID": parks_knowledge_base.attr_knowledge_base_id,
+                },
+                log_group=rust_log_group,
+            )
+            CfnOutput(
+                self,
+                "RustCandidateFunctionName",
+                value=rust_function.function_name,
+                description="Direct-invocation Rust candidate; not subscribed to inbound SNS.",
+            )
         inbound_messages.add_subscription(
             subscriptions.LambdaSubscription(echo_function)
         )
@@ -506,10 +570,42 @@ class BackcountrySmsAssistantStack(Stack):
                 resources=["*"],
             )
         )
+        echo_role = echo_function.role
+        assert echo_role is not None
+        runtime_roles = [echo_role]
+        if rust_function is not None:
+            assert rust_context is not None
+            rust_role = rust_function.role
+            assert rust_role is not None
+            runtime_roles.append(rust_role)
+            rust_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["bedrock:Retrieve"],
+                    resources=[parks_knowledge_base.attr_knowledge_base_arn],
+                )
+            )
+            rust_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["dynamodb:PutItem", "dynamodb:Query"],
+                    resources=[rust_context.table_arn],
+                )
+            )
+            rust_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["geo-places:SearchText"],
+                    resources=["*"],
+                )
+            )
+            rust_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
+                    resources=["*"],
+                )
+            )
         lite_model_policy = iam.Policy(
             self,
             "LiteModelPolicy",
-            roles=[echo_function.role],
+            roles=runtime_roles,
             statements=[iam.PolicyStatement(
                 actions=["bedrock:InvokeModel"],
                 resources=[
@@ -521,12 +617,12 @@ class BackcountrySmsAssistantStack(Stack):
                 ],
             )],
         )
-        lite_model_policy.node.default_child.cfn_options.condition = is_nova_lite
+        cast(iam.CfnPolicy, lite_model_policy.node.default_child).cfn_options.condition = is_nova_lite
 
         micro_model_policy = iam.Policy(
             self,
             "MicroModelPolicy",
-            roles=[echo_function.role],
+            roles=runtime_roles,
             statements=[iam.PolicyStatement(
                 actions=["bedrock:InvokeModel"],
                 resources=[
@@ -538,7 +634,7 @@ class BackcountrySmsAssistantStack(Stack):
                 ],
             )],
         )
-        micro_model_policy.node.default_child.cfn_options.condition = is_nova_micro
+        cast(iam.CfnPolicy, micro_model_policy.node.default_child).cfn_options.condition = is_nova_micro
         echo_function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
