@@ -11,9 +11,10 @@ natural-language locations, retrieves weather, uses bounded Amazon Bedrock inter
 synthesis, retains a short encrypted context window, returns one concise SMS, and includes
 observability, safe fallbacks, and explicit testing boundaries.
 
-The current worktree also contains uncommitted Stage 9.2/9.3.2 fire-ban and RAG implementation
-changes, related tests and performance notes, and proposed Stage 10 specifications. Those changes
-are not a clean release until their review and applicable final validation are complete.
+There are no uncommitted Stage 9.2/9.3.2 runtime changes. That work is represented in the
+repository at the evidence states below. The proposed Stage 10, Stage 9.2.1, and Stage 11
+specifications remain documentation-only until separately implemented and validated; the current
+documentation edits are limited to this status correction and those specification updates.
 
 Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed and verified on the
 dedicated demo capture stack; this is the project's only deployed environment.
@@ -45,7 +46,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Stage 7.3 — evaluation reporting and gates | Local reports, redaction checks, usage/latency evidence, and deterministic gates implemented |
 | Stage 9.1 — static typing | Implemented locally; `mypy` build/CI gate and negative check added |
 | Stage 9.2 — fire-ban/geospatial lookup | Implemented locally with validated topology, snapshots, and bounded Athena adapter; live S3/Athena deferred |
-| Stage 9.3.1 — Ontario Parks guide corpus | MVP corpus generated locally; rerunnable generator deferred |
+| Stage 9.3.1 — Ontario Parks guide corpus | MVP corpus generated locally; rerunnable generator and refresh of time-sensitive park information deferred |
 | Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted Algonquin retrieval smoke test passed without SMS/SNS |
 
 ## Not done — proposed or deferred
@@ -53,11 +54,12 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Spec / capability | Current status |
 | --- | --- |
 | Stage 8 — broader production reliability | Proposed; burst SMS quota and delivery work remains |
-| Stage 9.2.1 — automated fire-ban/geospatial ingestion | Proposed; depends on Stage 9.2 evidence |
+| Stage 9.2.1 — automated fire-ban/geospatial ingestion | Deferred; the Stage 9.2 lookup is implemented locally, but live ingestion, refresh, and promotion are not implemented |
 | Stage 9.3 — broader camping RAG knowledge base | Proposed; follows the fire-ban/source work |
 | Stage 9.4 — runtime configuration via Parameter Store | Proposed; design only |
 | Stage 10 — AI invocation boundary | Proposed; specification only |
 | Stage 10.1 — baseline application guardrails | Proposed; specification only |
+| Stage 11 — Rust application runtime migration | Proposed; specification only; the Python runtime remains the current implementation |
 | Multi-channel support and generalized autonomous-agent behavior | Deferred; outside the current release boundary |
 
 ## Operational controls already present
@@ -73,7 +75,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 ## Current next actions
 
 1. Stop feature expansion and define the portfolio release boundary.
-2. Review and validate the current Stage 9.2/9.3.2 worktree changes, or explicitly park them.
+2. Review and decide whether to implement the proposed Stage 11 Rust migration.
 3. Rewrite the README and create publication-safe AWS architecture and operations diagrams.
 4. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
    commit.
