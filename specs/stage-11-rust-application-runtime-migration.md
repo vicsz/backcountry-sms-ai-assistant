@@ -1,9 +1,8 @@
 # Stage 11 — Rust application runtime migration
 
-**Status:** Partially implemented. The Rust candidate has concrete provider adapters, offline
-contract coverage, a reproducible package target, isolated CDK wiring, and a successful Demo
-capture canary. The Python runtime remains the deployed oracle; matched parity comparison,
-application-span verification, rollback, and cutover remain outstanding.
+**Status:** Accepted for the Demo request path. Rust is the only deployed request Lambda and the
+Python runtime has been removed from the deployed stack. The Python CDK and support modules remain
+for infrastructure/tests; fire-ban ingestion and a real SMS smoke test remain explicitly deferred.
 
 ## Objective
 
@@ -76,10 +75,10 @@ safe. Redacted candidate telemetry and Lambda REPORT data were inspected. Fire-b
 did not pass the model-output gate, and fire-ban ingestion remains deferred; its fixture-only
 behavior is not presented as live status.
 
-The Python runtime remains the deployed oracle and normal request path. A matched Python-versus-
-Rust performance/parity comparison has not been completed because the normal Python Demo target is
-configured for live delivery and no separate Python capture target exists. No normal-target Rust
-cutover or Python source removal is claimed.
+The Python runtime was used as the pre-cutover oracle through an isolated capture twin. The matched
+comparison, Rust application-span verification, rollback drill, and Demo cutover are recorded
+below. The deployed request path is now Rust; `backcountry_sms/` remains only as retained Python
+support/evaluation code for safe rollback development and CDK imports, not as a deployed Lambda.
 
 ## Controlled Demo canary record — 2026-09-05
 
@@ -94,8 +93,8 @@ returned `status=captured`, followed the expected logical call path, and reporte
 
 The subsequent observation window exceeded 15 minutes. Redacted evidence recorded three Lambda
 invocations, zero Lambda errors, zero error-like log events, telemetry events, and no observed
-prohibited sensitive fields. This is a successful candidate canary only; Python remained the
-normal deployed implementation and no real SMS or normal-target cutover occurred.
+prohibited sensitive fields. This remains a successful historical candidate canary; the completed
+matched comparison, rollback, and normal-target promotion are recorded below.
 
 ## Decision boundary
 
@@ -428,3 +427,27 @@ Retain only redacted evidence:
 
 Raw logs, prompts, model responses, provider payloads, credentials, account identifiers, phone
 numbers, private URLs, and personal coordinates remain outside the repository and permanent report.
+
+## Matched comparison and final cutover record — 2026-09-05
+
+The Python capture twin and Rust candidate used the same x86_64, 128 MB, 25-second, Bedrock and
+capture-mode configuration. Six synthetic scenarios were exercised: GPS weather, named weather,
+history follow-up, current-location replacement, Ontario Parks retrieval, and an unknown location.
+All returned `captured`; both implementations reported `sms_api_called=false` and
+`sns_published=false`. The permanent redacted measurements are in
+[`docs/performance.md`](../docs/performance.md).
+
+The first named-weather sample stopped at a safe Rust location fallback. A clean rerun of the same
+query passed the expected location, weather, and advice path; the transient result was not treated
+as parity until the rerun succeeded. Rust X-Ray application subsegments were observed for context,
+interpretation, location, weather, retrieval, and response operations. The tracing path is
+fail-closed and non-fatal if the X-Ray environment is unavailable.
+
+The rollback drill temporarily resubscribed Python in capture mode, verified one bounded Python
+response with both outbound flags false, and then restored Rust as primary. The final Demo deploy
+uses `provided.al2023`, x86_64, 128 MB, 25 seconds, active tracing, `TEST_MODE=false`, and
+`SMS_DELIVERY_MODE=live`; SNS points to Rust, the deployed Python Lambda count is zero, and the
+deployed Rust bootstrap hash matches the locally built package. The final 15-minute observation
+recorded zero Rust log events, zero REPORT events, and zero error-like events because no live test
+traffic was generated. A real SMS smoke test was not run because it requires separate explicit
+authorization.

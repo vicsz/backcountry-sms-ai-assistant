@@ -531,3 +531,59 @@ This is a successful Demo candidate canary, not a cutover or Python-versus-Rust 
 remained the normal request path, and the matched comparison, complete failure matrix, application
 span verification, rollback test, and normal-target promotion remain open. Fire-ban ingestion was
 outside this canary and remains deferred.
+
+## Stage 11 — matched Python versus Rust capture comparison and cutover
+
+Date: 2026-09-05
+Deployment: Demo `BackcountrySmsEchoTest`; final implementation commit `9aa9ca7`; Rust final
+target `provided.al2023`, x86_64, 128 MB, 25 seconds
+Scope: six synthetic capture scenarios, same sequence and capture-only delivery boundary for both
+runtimes; no SMS or SNS publication
+
+### Artifact and operational footprint
+
+| Dimension | Python rollback package | Rust package | Interpretation |
+|---|---:|---:|---|
+| Compressed deployment package | 1,705,052 bytes | 6,609,398 bytes | Rust is a self-contained binary package; Python includes the application and dependencies |
+| Uncompressed package payload | 5,142,962 bytes | 15,787,904 bytes | Rust binary is larger on disk, with no interpreter/layer in its runtime package |
+| Lambda max memory in matched warm samples | 122 MB | 36–38 MB | Directional; Python used an ADOT layer and Rust did not |
+
+### Matched warm samples
+
+| Runtime | Samples | Lambda p50 | Directional p95 | Max memory | Capture result |
+|---|---:|---:|---:|---:|---|
+| Python 3.12 | 6 | 1,566 ms | 2,165 ms | 122 MB | 6/6 captured; SMS/SNS false |
+| Rust | 6 | 1,490 ms | 1,584 ms | 38 MB | 6/6 captured; SMS/SNS false |
+
+These are small, provider-dependent warm samples rather than a language benchmark. The Rust
+sample's p50 was approximately 5% lower and its observed maximum memory was approximately 69%
+lower, but the implementations did not use identical tracing layers and no matched cold sample
+was collected. Historical Python cold evidence remains approximately 9,657 ms total duration;
+one early Rust candidate cold observation reported 3,400 ms billed duration. Those cold figures are
+directional context only and are not a controlled comparison.
+
+### Call-path and observability findings
+
+The Rust response contract exposed the expected bounded paths: context read/reserve/complete on
+handled requests; interpretation on all handled requests; weather plus advice on weather cases;
+location resolution on named cases; and retrieval plus grounded response on the guide case. The
+redacted Python log window containing the matrix recorded Bedrock, weather, location, retrieval,
+cache, capture, and reply events. The Rust log window recorded low-cardinality adapter/route/reply
+events, and sampled X-Ray traces contained context, interpretation, location, weather, retrieval,
+and reply subsegments. The schemas differ, so event totals are evidence of coverage rather than a
+claim that every count is numerically identical.
+
+The initial named-weather Rust sample followed a safe location fallback without a weather call. A
+clean rerun of the same scenario passed the expected location, weather, and advice path. This was
+recorded as a transient provider/model outcome and was not used as parity evidence until rerun.
+
+### Cutover evidence
+
+- Rust package hash matched the deployed Lambda bootstrap before and after final promotion.
+- The rollback drill resubscribed Python in capture mode; one bounded Python response passed with
+  `sms_api_called=false` and `sns_published=false`.
+- Final Demo state has one Rust request Lambda, no deployed Python request Lambda, and SNS points to
+  Rust. The Python source remains only for CDK/support and evaluation use.
+- The final 15-minute Rust-only observation recorded zero log events, zero REPORT events, and zero
+  error-like events because no live test traffic was generated.
+- A real SMS smoke test was not run; it remains a separately authorized operational action.

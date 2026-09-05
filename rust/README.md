@@ -18,10 +18,10 @@ adapters implement:
 - redacted low-cardinality JSON/CloudWatch EMF telemetry.
 
 The local capture harness injects deterministic fakes and records logical calls. It does not call
-Bedrock, HTTP providers, DynamoDB, retrieval, Athena, SNS, or SMS. The active Python Lambda remains
-the oracle and deployed request path until parity and cutover gates pass. Fire-ban ingestion is
-explicitly deferred; the Rust candidate reports unknown with `ingestion_deferred` rather than
-claiming live status.
+Bedrock, HTTP providers, DynamoDB, retrieval, Athena, SNS, or SMS. The deployed Demo request path
+is now the Rust Lambda; the retained Python modules are support/evaluation code and are not
+deployed as a request runtime. Fire-ban ingestion is explicitly deferred; Rust reports unknown
+with `ingestion_deferred` rather than claiming live status.
 
 ## Local checks
 
@@ -41,8 +41,9 @@ asset at `dist/bootstrap`. On Apple Silicon, a Linux cross-linker such as Zig ma
 the package can be built with `BUILD_CMD='cargo zigbuild' make package` when
 `cargo-zigbuild` is installed.
 
-The Python CDK remains the active deployment path. Setting the CDK context
+The Python CDK remains the active infrastructure deployment path. Setting the CDK context
 `rust_candidate=true` adds an isolated `provided.al2023` candidate function to the Demo test stack;
 it is capture-only, has no inbound SNS subscription, uses a separate context table, and has no SMS
-permission. Replacing the active Python asset requires the parity, deployed capture, measurement,
-review, and rollback gates in the Stage 11 specification.
+permission. Setting `rust_runtime=true` makes Rust the only deployed request Lambda and points the
+inbound SNS subscription at it; the Stage 11 specification records the completed parity, capture,
+measurement, review, rollback, and cutover gates.
