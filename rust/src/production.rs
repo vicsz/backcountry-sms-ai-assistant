@@ -32,6 +32,7 @@ use tokio::{runtime::Runtime, sync::OnceCell, task};
 
 const MAX_RETRIEVAL_RESULTS: usize = 3;
 const MIN_RETRIEVAL_SCORE: f64 = 0.4;
+const GUIDE_CORPUS: &str = include_str!("../../data/rag/ontario-provincial-parks-guide.md");
 
 struct SharedClients {
     model: bedrock_runtime::Client,
@@ -963,8 +964,43 @@ fn derive_citation(excerpt: &str) -> (String, String, Option<String>) {
     } else {
         ""
     };
-    let source_url = official_url(excerpt);
+    let mut source_url = official_url(excerpt);
+    if park_name.is_empty() || source_url.is_none() {
+        let (corpus_park, corpus_url) = corpus_citation(excerpt);
+        if park_name.is_empty() {
+            park_name = corpus_park;
+        }
+        if source_url.is_none() {
+            source_url = corpus_url;
+        }
+    }
     (park_name, section.into(), source_url)
+}
+
+fn corpus_citation(excerpt: &str) -> (String, Option<String>) {
+    let needle = excerpt.split_whitespace().collect::<Vec<_>>().join(" ");
+    let needle = needle.to_ascii_lowercase();
+    let needle = needle.chars().take(120).collect::<String>();
+    if needle.is_empty() {
+        return (String::new(), None);
+    }
+    GUIDE_CORPUS
+        .split("\n## ")
+        .skip(1)
+        .find_map(|block| {
+            let heading = block.lines().next()?.trim();
+            let normalized = block.split_whitespace().collect::<Vec<_>>().join(" ");
+            if !normalized.to_ascii_lowercase().contains(&needle) {
+                return None;
+            }
+            let park_name = heading
+                .split_once(" - Official page:")
+                .map(|(name, _)| name.trim())
+                .unwrap_or(heading)
+                .to_owned();
+            Some((park_name, official_url(block)))
+        })
+        .unwrap_or_default()
 }
 
 struct DeferredFireBan;
