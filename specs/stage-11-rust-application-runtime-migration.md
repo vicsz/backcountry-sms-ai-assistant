@@ -1,9 +1,9 @@
 # Stage 11 — Rust application runtime migration
 
-**Status:** Partially implemented locally. The Rust candidate has concrete provider adapters,
-offline contract coverage, a reproducible package target, and opt-in isolated CDK wiring. The
-Python runtime remains the deployed oracle; candidate deployment, parity comparison, measurement,
-review, live gates, and cutover remain outstanding.
+**Status:** Partially implemented. The Rust candidate has concrete provider adapters, offline
+contract coverage, a reproducible package target, isolated CDK wiring, and a successful Demo
+capture canary. The Python runtime remains the deployed oracle; matched parity comparison,
+application-span verification, rollback, and cutover remain outstanding.
 
 ## Objective
 
@@ -80,6 +80,22 @@ The Python runtime remains the deployed oracle and normal request path. A matche
 Rust performance/parity comparison has not been completed because the normal Python Demo target is
 configured for live delivery and no separate Python capture target exists. No normal-target Rust
 cutover or Python source removal is claimed.
+
+## Controlled Demo canary record — 2026-09-05
+
+The isolated Rust candidate was exercised through direct synthetic invocations against the Demo
+`BackcountrySmsEchoTest` stack. It remained forced to `DEPLOYMENT_ENVIRONMENT=test`,
+`TEST_MODE=true`, and `SMS_DELIVERY_MODE=capture`, with its separate context table, no inbound SNS
+subscription, and no SMS/SNS permission.
+
+Three scenarios passed: GPS weather, named-place weather, and Ontario Parks guide retrieval. Each
+returned `status=captured`, followed the expected logical call path, and reported
+`sms_api_called=false` and `sns_published=false`.
+
+The subsequent observation window exceeded 15 minutes. Redacted evidence recorded three Lambda
+invocations, zero Lambda errors, zero error-like log events, telemetry events, and no observed
+prohibited sensitive fields. This is a successful candidate canary only; Python remained the
+normal deployed implementation and no real SMS or normal-target cutover occurred.
 
 ## Decision boundary
 

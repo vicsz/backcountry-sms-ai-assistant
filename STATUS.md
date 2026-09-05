@@ -13,8 +13,8 @@ observability, safe fallbacks, and explicit testing boundaries.
 
 There are no uncommitted Stage 9.2/9.3.2 runtime changes. That work is represented in the
 repository at the evidence states below. Stage 10 and Stage 9.2.1 remain documentation-only;
-Stage 11 has a local Rust candidate with concrete adapters and isolated opt-in CDK wiring, but it
-has not been deployed or live-verified.
+Stage 11 has a Rust candidate deployed and live-verified in forced capture mode beside the active
+Python runtime; it has not been promoted to the normal request path.
 
 Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed and verified on the
 dedicated demo capture stack; this is the project's only deployed environment.
@@ -59,7 +59,7 @@ dedicated demo capture stack; this is the project's only deployed environment.
 | Stage 9.4 — runtime configuration via Parameter Store | Proposed; design only |
 | Stage 10 — AI invocation boundary | Proposed; specification only |
 | Stage 10.1 — baseline application guardrails | Proposed; specification only |
-| Stage 11 — Rust application runtime migration | Candidate deployed to Demo in forced capture mode; concrete adapters, 19 passing Rust tests, locked package path, GPS/named-weather/RAG live checks, and redacted telemetry verified; Python remains the deployed implementation, matched comparison and cutover gates remain open |
+| Stage 11 — Rust application runtime migration | Demo canary passed in forced capture mode; concrete adapters, 19 passing Rust tests, GPS/named-weather/RAG live checks, three-scenario canary, clean observation window, and redacted telemetry verified; Python remains the deployed implementation, matched comparison and cutover gates remain open |
 | Multi-channel support and generalized autonomous-agent behavior | Deferred; outside the current release boundary |
 
 ## Operational controls already present
@@ -74,9 +74,9 @@ dedicated demo capture stack; this is the project's only deployed environment.
 
 ## Current next actions
 
-1. Provide a separately isolated Python capture target, or explicitly authorize the distinct real-
-   SMS path, so the matched Rust-versus-Python comparison can run safely.
-2. Resolve the remaining Rust fire-ban model-output gate; keep ingestion deferred and fixture-only.
+1. Provide a separately isolated Python capture target so the matched Rust-versus-Python comparison
+   can run safely; keep fire-ban ingestion deferred and fixture-only.
+2. Verify the remaining Rust application spans and complete the full parity/failure matrix.
 3. Keep Python active unless every Stage 11 parity, rollback, and observation gate passes.
 4. Rewrite the README and create publication-safe AWS architecture and operations diagrams.
 5. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial

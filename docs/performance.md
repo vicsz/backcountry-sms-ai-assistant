@@ -510,3 +510,24 @@ deferred and is not live-verified.
 Rust-versus-Python latency, memory, retry, and call-count comparison remains blocked until a
 separately isolated Python capture target is available or an immediately authorized real-SMS
 check permits a matched normal-target run. Do not infer a Rust advantage from this observation.
+
+### Stage 11 controlled Demo canary — 2026-09-05
+
+The isolated Rust candidate was exercised with three synthetic direct invocations against the Demo
+`BackcountrySmsEchoTest` stack. It remained forced to test/capture mode, used an isolated context
+table, had no inbound SNS subscription, and had no SMS/SNS permission.
+
+| Scenario | Result | Redacted logical path |
+| --- | --- | --- |
+| GPS weather | Captured | context read/reserve, interpretation, weather, advice, context complete |
+| Named-place weather | Captured | context read/reserve, interpretation, location, weather, advice, context complete |
+| Ontario Parks guide lookup | Captured | context read/reserve, interpretation, retrieval, RAG response, context complete |
+
+All three cases reported `sms_api_called=false` and `sns_published=false`. The following quiet
+observation window exceeded 15 minutes and recorded three Lambda invocations, zero Lambda errors,
+zero error-like log events, redacted telemetry, and no observed prohibited sensitive fields.
+
+This is a successful Demo candidate canary, not a cutover or Python-versus-Rust benchmark. Python
+remained the normal request path, and the matched comparison, complete failure matrix, application
+span verification, rollback test, and normal-target promotion remain open. Fire-ban ingestion was
+outside this canary and remains deferred.
