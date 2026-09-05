@@ -69,8 +69,10 @@ boundary.
   store is required.
 - Use fixed chunking at 300 tokens with 30-token overlap. Do not add semantic chunking or a custom
   parser until evaluation shows that fixed chunks lose useful park-section context.
-- Trigger one explicit data-source sync after the object is uploaded. Scheduled ingestion, source
-  polling, and automatic refresh remain out of scope.
+- Trigger one explicit data-source sync after the object is uploaded. This is a one-time snapshot
+  load, not ongoing maintenance; scheduled ingestion, source polling, automatic refresh, and
+  freshness enforcement for hours, rentals, operating dates, fees, reservations, or availability
+  remain deferred to a future ingestion/refresh stage.
 - Record the Knowledge Base/data-source identifiers, embedding model, chunking settings, source
   object version or SHA-256, and deployment region in implementation documentation or stack outputs.
   Do not commit account-specific IDs or generated AWS configuration.
@@ -130,7 +132,9 @@ SMS-send code during unit tests.
 - Any live retrieval check is explicit, opt-in, redacted, and separate from unit tests.
 
 No scheduled ingestion, source polling, corpus refresh, park-page scraping, automatic data update,
-or broader camping corpus is implemented by this stage.
+or freshness enforcement for time-sensitive park information is implemented by this stage. The
+one-time corpus and any retrieved hours or rental details must not be presented as continuously
+current.
 
 ## Implementation record
 

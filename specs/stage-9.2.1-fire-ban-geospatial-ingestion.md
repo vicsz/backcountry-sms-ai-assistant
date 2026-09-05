@@ -1,51 +1,162 @@
-# Stage 9.2.1 — Fire-ban and geospatial-source ingestion extension
+# Stage 9.2.1 — Live-verifiable fire-ban and geospatial ingestion
 
-Status: Proposed; blocked on completion and evidence from Stage 9.2
+Status: Deferred implementation; specification complete. Stage 9.2's prepared local snapshot
+remains the current implementation; live source retrieval, S3 publication, Athena query,
+deployment, and provider verification are not yet implemented or established by this document.
 
 ## Objective
 
-Automate the refresh and validation of the static fire-ban/geospatial lookup introduced by
-`specs/stage-9.2-fire-ban-geospatial-lookup.md`, while preserving source authority, versioned
-snapshots, last-known-good data, and explicit uncertainty.
+Define a bounded, repeatable ingestion path for the Stage 9.2 Ontario provincial-park lookup. A
+promoted snapshot may be used by the deployed Demo handler only after source, provenance,
+normalization, validation, publication, and live-verification gates pass. Source wording and
+authority remain visible; absence never becomes permission to have a fire.
 
-## In-scope extensions
+## Sources and authority
 
-- Retrieve the Ontario Parks alerts source and the official LIO park geometry source on a bounded
-  schedule and on an explicit/manual refresh request.
-- Detect source changes, retain raw artifacts, calculate source hashes, and promote only validated,
-  complete snapshots.
-- Validate schema, required identifiers, geometry validity, coordinate reference system, duplicate
-  parks/alerts, timestamps, and join coverage before promotion.
-- Preserve the last known good snapshot when retrieval, parsing, validation, or promotion fails.
-- Emit refresh outcome, source version, record counts, validation failures, snapshot age, and last
-  successful refresh without logging personal data or secrets.
-- Add the Ontario Restricted Fire Zone source as a separately authoritative provincial restriction
-  layer and define deterministic conflict handling with Ontario Parks alerts.
-- Investigate broader source coverage in a separate discovery record before adding municipal,
-  conservation-authority, Indigenous-government, Parks Canada, or other jurisdictions.
-- Expand from fire bans to relevant park closures only after status semantics, geography, and source
-  authority are defined per source.
+The parks-first MVP has two required source families:
 
-## Refresh and failure contract
+1. Ontario Parks alerts: the primary park-level alert/status source, including park name, alert
+   URL, alert type, exact wording, and the page's `as of` value.
+2. Ontario LIO `Provincial Park Regulated`: the official provincial-park geometry and stable park
+   identifier source used for point-in-polygon membership and the status join.
 
-- Refreshes are idempotent and produce immutable snapshot identifiers.
-- A partial or malformed refresh is never visible as the current snapshot.
-- Stale data must be surfaced to the handler as `unknown` or explicitly stale, with the last
-  successful refresh time.
-- Source wording is preserved; normalization may classify but may not invent legal meaning.
-- The scheduled path must not be hidden in unit tests and must not send SMS.
+Reference sources:
 
-## Evaluation and acceptance criteria
+- [Ontario Parks alerts](https://www.ontarioparks.ca/alerts)
+- [Ontario LIO Provincial Park Regulated](https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_OPEN_DATA/LIO_Open03/MapServer/4)
+- [Ontario LIO Restricted Fire Zone](https://ws.lioservices.lrc.gov.on.ca/arcgis2/rest/services/LIO_OPEN_DATA/LIO_Open08/MapServer/28)
 
-- Repeated refreshes of unchanged sources produce equivalent normalized content and a traceable
-  snapshot outcome.
-- Changed, missing, malformed, conflicting, stale, and partially unavailable sources are covered by
-  offline fixtures.
-- A live source/provider check is opt-in, separately gated, redacted, and excluded from unit tests.
-- The runbook documents refresh cadence, manual retry, rollback to the last good snapshot, stale
-  behavior, cost, Athena latency, and operator evidence.
-- Broader jurisdiction coverage is not declared complete until each source's authority, coverage,
-  terms, update behavior, geometry model, and status semantics are verified.
+The Ontario Restricted Fire Zone (RFZ) layer may be ingested as a separately labeled provincial
+restriction layer only when its authority and coverage are verified. It must never be silently
+merged with an Ontario Parks alert. Every source record and raw artifact must retain source name,
+canonical URL, retrieval timestamp (UTC), source-provided timestamps, content hash, parser/schema
+version, coverage statement, and a terms/availability check (robots/access rules, licence or open
+data terms, rate limits, authentication, and whether automated retrieval is permitted). A source
+that cannot be retrieved or whose terms do not permit the planned access is unavailable, not empty.
 
-No implementation or deployment is authorized by this extension until Stage 9.2 has established
-the initial source and query contract.
+## Refresh and promotion pipeline
+
+Refresh is scheduled at a bounded cadence and is also available as an explicit operator/manual
+run. Each run must:
+
+1. retrieve the bounded source resources and retain immutable raw artifacts;
+2. record retrieval time, response metadata needed for audit, hashes, coverage, and terms check;
+3. parse into the versioned normalized schema without inventing legal meaning;
+4. validate identifiers, required fields, timestamps/time zones, supported status values, geometry
+   validity/CRS/coordinate order, duplicate records, and park/status join coverage;
+5. validate source freshness and cross-source consistency, producing a machine-readable report;
+6. write an immutable `snapshot_id` containing the source hashes, schema/parser versions, and
+   creation time; and
+7. promote the snapshot atomically only if all required gates pass.
+
+Partial, malformed, unbounded, or failed runs are never visible as current. Promotion must retain
+the previous immutable last-known-good snapshot and a pointer to it. On first publication, there
+is no current pointer until a complete snapshot passes every gate; the handler returns `unknown`
+and no confirmed fire status is available. Rollback changes only the current pointer to that
+snapshot and records operator, reason, time, and evidence. Unchanged input must produce equivalent
+normalized content and a traceable no-change outcome.
+
+Normalized records must include `source_name`, `source_url`, `source_record_id`, `source_hash`,
+`jurisdiction`, `park_id`, `park_name`, `alert_type`, `normalized_status`, exact `raw_wording`,
+`source_as_of`, `published_at` when available, `retrieved_at`, `effective_at` when available,
+geometry and CRS metadata, `snapshot_id`, `snapshot_created_at`, and schema version.
+
+## Deterministic status and failure semantics
+
+The handler may return `fire_ban` only for an authoritative active fire-ban record in the
+selected snapshot. A park with no Ontario Parks fire-ban row is reported only as “no Ontario Parks
+fire-ban record in this snapshot,” with freshness and source context; it is never “no ban,”
+“fires allowed,” or permission by implication. An RFZ result remains a separate restriction fact.
+
+Return `unknown` (and preserve a reason and relevant timestamps) for stale or missing snapshots,
+missing or invalid geometry, unresolved boundary points, no park match, conflicting sources,
+unsupported status/geometry/CRS, source-down or terms-blocked retrieval, parse/validation failure,
+Athena failure/timeout, or incomplete join coverage. A future-dated or otherwise impossible source
+timestamp is invalid. Never substitute the nearest park, invent coordinates, infer current status
+from absence, or let an LLM decide status, jurisdiction, geometry, or freshness. Fire lookup
+failure remains independent of weather lookup.
+
+Staleness thresholds must be configuration, documented with the snapshot, and evaluated against
+UTC retrieval/source times. Stale data may support diagnostics only; it cannot support a confirmed
+status. Geometry-boundary behavior must be deterministic: inside, outside, and boundary are
+distinct outcomes, and an unresolved boundary is `unknown`.
+
+## Deployed read path and safety boundary
+
+The deployed Python handler reads only the atomically promoted `current` pointer and then queries
+the referenced immutable snapshot. Snapshot ID, table/prefix, region, and freshness policy are
+allow-listed, validated configuration; missing, malformed, or unexpected values fail closed to
+`unknown`. The handler must not scrape sources, promote data, or scan a broad S3 prefix.
+
+Athena access, if retained from Stage 9.2, must use a snapshot-pinned table/query, bounded
+partitions and selected columns, explicit timeout/cancellation, and these initial hard limits:
+each source response/page is at most 10 MiB, a refresh run produces at most 100 MiB of raw source
+artifacts, a normalized snapshot contains at most 10,000 park records and 2,000,000 coordinate
+vertices, and each handler query has a 5-second timeout and a 64 MiB scanned-bytes limit. The
+publisher must retain raw artifacts for 90 days and the current plus five previous validated
+snapshots for rollback, subject to documented lifecycle enforcement. The publisher role may write
+only versioned artifacts, manifests, and the current pointer; the handler role is read-only and
+may read only the current pointer and normalized snapshot data, never raw artifacts or any
+publisher path. No unbounded Athena scan is permitted. Raw source payloads, message bodies,
+prompts, model output, coordinates tied to people, credentials, and secrets must not appear in
+logs or evidence.
+
+## Verification and evidence
+
+Implementation must provide, separately:
+
+- offline unit tests and synthetic fixtures for valid, unchanged, changed, stale, missing,
+  conflicting, unsupported, source-down, malformed, incomplete, invalid-geometry, boundary,
+  outside-park, and no-status cases;
+- parser contract tests against source-shaped fixtures, including provenance, hashes, coverage,
+  terms metadata, and schema-version changes;
+- an explicit opt-in live source/provider validation that records redacted retrieval times, hashes,
+  coverage, terms result, parser/validation outcome, and no SMS side effect;
+- deployed Demo capture-mode verification against `BackcountrySmsEchoTest`, proving the handler
+  reads the promoted snapshot, applies freshness and safety semantics, and does not send SMS;
+- operational checks for scheduled refresh, alerting, metrics, retry bounds, cost, Athena scan and
+  latency limits, current-pointer integrity, last-known-good rollback, and recovery from source
+  outage; and
+- redacted, source-preserving evidence that distinguishes local fixtures, live source validation,
+  promoted snapshot, deployed Demo behavior, and any separately authorized SMS check.
+
+## Acceptance criteria
+
+Pass requires all of the following; any failure leaves the prior last-known-good snapshot current:
+
+- both required sources have documented authority, coverage, canonical retrieval method, terms/
+  availability result, timestamps, and hashes from an authorized live validation;
+- a complete normalized snapshot passes schema, provenance, geometry/CRS, freshness, duplicate,
+  join-coverage, and deterministic status tests, with an immutable ID and reproducible manifest;
+- atomic promotion and rollback are demonstrated with a synthetic failed refresh and a real
+  last-known-good pointer check; first publication is demonstrated with no pointer and a handler
+  `unknown` result;
+- the deployed Demo capture check proves bounded, snapshot-pinned reads and correct `unknown`
+  behavior for stale, missing, conflicting, unsupported, source-down, and boundary cases;
+- operational refresh checks prove the 10 MiB response/page, 100 MiB raw-artifact, 10,000-record,
+  2,000,000-vertex, 5-second Athena timeout, and 64 MiB scanned-bytes limits; 90-day raw-artifact
+  and six-snapshot lifecycle policies; publisher/reader IAM separation; bounded retries,
+  alerting, redacted evidence, and no unbounded Athena scan; and
+- reviewer-approved evidence contains no secrets, personal data, raw messages, or unsupported
+  claim that a live feed is continuously available.
+
+## Non-goals
+
+Municipal, conservation-authority, Indigenous-government, Parks Canada, or broader jurisdiction
+coverage; generalized closures; RAG; Rust migration; autonomous legal advice or emergency action;
+and real SMS sending are out of scope. A real SMS check requires separate explicit authorization
+and is not implied by this spec. No source is declared continuously available merely because a
+live check succeeded once.
+
+## Sequencing and runbook expectations
+
+Implement in this order: source/terms contract; raw and normalized snapshot manifest; parser and
+offline fixtures; validation and deterministic promotion/rollback; bounded S3/Athena read path;
+live source validation; Demo capture verification; then scheduled refresh and operational checks.
+Keep implementation within this sequence and update future ideas separately.
+
+The runbook must name the cadence, operator/manual refresh procedure, access/rate-limit handling,
+stale thresholds, alert thresholds, retry/timeout bounds, cost and Athena limits, evidence
+redaction, promotion, last-known-good rollback, source-outage response, and recovery validation.
+It must explicitly state that Stage 9.2's local snapshot is the current implementation until all
+acceptance gates pass.

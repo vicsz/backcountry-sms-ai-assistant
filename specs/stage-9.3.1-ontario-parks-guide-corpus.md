@@ -1,6 +1,7 @@
 # Stage 9.3.1 — One-time Ontario provincial parks guide corpus
 
-Status: Complete for the MVP; one-time corpus generated locally; rerunnable generator deferred
+Status: Complete for the MVP; one-time corpus generated locally; rerunnable generator and refresh
+of time-sensitive park information deferred
 
 ## Objective
 
@@ -46,7 +47,9 @@ Exclude or clearly mark as non-RAG content:
 
 The corpus must preserve source URLs and distinguish an official source fact from a generated
 summary. Facts that can change must carry a review/retrieval date and a “verify current details”
-boundary rather than being presented as permanently current.
+boundary rather than being presented as permanently current. Ongoing ingestion, freshness checks,
+and refresh of hours, rentals, operating dates, fees, reservations, or availability are deferred
+to a future ingestion/refresh stage.
 
 ## MVP preparation requirements
 
@@ -78,4 +81,5 @@ The generation check must verify:
   documents exclusions and missing source pages.
 - A rerunnable generator and external manifest are not required for this MVP.
 - No scheduled ingestion, automatic refresh, live status lookup, vector-store setup, handler change,
-  deployment, or SMS send is part of this stage.
+  deployment, or SMS send is part of this stage. In particular, this stage does not keep hours,
+  rental availability, or other time-sensitive operational details current.
