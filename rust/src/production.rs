@@ -924,18 +924,19 @@ fn official_url(value: &str) -> Option<String> {
 }
 
 fn derive_citation(excerpt: &str) -> (String, String, Option<String>) {
-    let mut park_name = String::new();
-    for line in excerpt.lines() {
-        let heading = line.trim().strip_prefix("## ");
-        if let Some(heading) = heading {
-            park_name = heading
+    let mut park_name = regex::Regex::new(r"(?:^|\s)##\s+([^\n]+)")
+        .unwrap()
+        .captures(excerpt)
+        .and_then(|captures| captures.get(1))
+        .map(|heading| {
+            heading
+                .as_str()
                 .split_once(" - Official page:")
                 .map(|(name, _)| name.trim())
-                .unwrap_or(heading)
-                .to_owned();
-            break;
-        }
-    }
+                .unwrap_or(heading.as_str())
+                .to_owned()
+        })
+        .unwrap_or_default();
     let lower = excerpt.to_ascii_lowercase();
     let section = if [
         "facility",
@@ -989,7 +990,10 @@ fn corpus_citation(excerpt: &str) -> (String, Option<String>) {
         .skip(1)
         .find_map(|block| {
             let heading = block.lines().next()?.trim();
-            let normalized = block.split_whitespace().collect::<Vec<_>>().join(" ");
+            let normalized = format!("## {block}")
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ");
             if !normalized.to_ascii_lowercase().contains(&needle) {
                 return None;
             }
@@ -1195,5 +1199,20 @@ mod tests {
             Some("https://www.ontarioparks.ca/park/killarney")
         );
         assert_eq!(official_url("https://example.invalid/no"), None);
+    }
+
+    #[test]
+    fn corpus_citation_recovers_fixed_chunk_heading_context() {
+        let block = GUIDE_CORPUS
+            .split("\n## ")
+            .find(|block| block.starts_with("Algonquin Provincial Park"))
+            .unwrap();
+        let excerpt = format!("## {block}");
+        let (park, _section, source_url) = derive_citation(&excerpt);
+        assert_eq!(park, "Algonquin Provincial Park");
+        assert_eq!(
+            source_url.as_deref(),
+            Some("https://www.ontarioparks.ca/park/algonquin")
+        );
     }
 }
