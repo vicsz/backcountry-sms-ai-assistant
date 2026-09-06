@@ -180,18 +180,8 @@ class BackcountrySmsAssistantStack(Stack):
             "InboundMessages",
             display_name="Backcountry inbound SMS",
         )
-        # This historical table is detached in ENH-0008 after an explicit retain-policy update;
-        # the deployed Rust runtime uses the RustCandidateMessageContext table.
-        _legacy_message_context = dynamodb.Table(
-            self,
-            "MessageContext",
-            partition_key=dynamodb.Attribute(name="user_phone_e164", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
-            encryption=dynamodb.TableEncryption.AWS_MANAGED,
-            time_to_live_attribute="ttl",
-            removal_policy=RemovalPolicy.RETAIN,
-        )
+        # The historical Python-era MessageContext table was detached in ENH-0008 after its
+        # retain policy was deployed. The deployed Rust runtime uses the table below.
         rust_context = None
         if rust_candidate_enabled or rust_runtime_enabled:
             rust_context = dynamodb.Table(

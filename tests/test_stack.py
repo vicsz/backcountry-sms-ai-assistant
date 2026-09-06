@@ -166,7 +166,7 @@ def test_demo_stack_defaults_to_rust_only_request_runtime() -> None:
     assert len(inbound) == 1
 
 
-def test_legacy_python_context_table_is_retained_until_explicit_detach() -> None:
+def test_legacy_python_context_table_is_detached_from_synthesized_template() -> None:
     app = cdk.App()
     template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
 
@@ -174,8 +174,7 @@ def test_legacy_python_context_table_is_retained_until_explicit_detach() -> None
     legacy_tables = [
         resource for logical_id, resource in tables.items() if logical_id.startswith("MessageContext")
     ]
-    assert len(legacy_tables) == 1
-    assert legacy_tables[0]["DeletionPolicy"] == "Retain"
+    assert legacy_tables == []
 
 
 def test_rust_candidate_is_opt_in_and_not_subscribed_to_inbound_sns() -> None:
