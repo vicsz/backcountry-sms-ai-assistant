@@ -180,8 +180,8 @@ class BackcountrySmsAssistantStack(Stack):
             "InboundMessages",
             display_name="Backcountry inbound SMS",
         )
-        # Retain the historical table resource for safe cleanup in a separate infrastructure
-        # change; the deployed Rust runtime uses the RustCandidateMessageContext table.
+        # This historical table is detached in ENH-0008 after an explicit retain-policy update;
+        # the deployed Rust runtime uses the RustCandidateMessageContext table.
         _legacy_message_context = dynamodb.Table(
             self,
             "MessageContext",
@@ -190,6 +190,7 @@ class BackcountrySmsAssistantStack(Stack):
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
             encryption=dynamodb.TableEncryption.AWS_MANAGED,
             time_to_live_attribute="ttl",
+            removal_policy=RemovalPolicy.RETAIN,
         )
         rust_context = None
         if rust_candidate_enabled or rust_runtime_enabled:

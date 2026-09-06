@@ -166,6 +166,18 @@ def test_demo_stack_defaults_to_rust_only_request_runtime() -> None:
     assert len(inbound) == 1
 
 
+def test_legacy_python_context_table_is_retained_until_explicit_detach() -> None:
+    app = cdk.App()
+    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
+
+    tables = template.find_resources("AWS::DynamoDB::Table")
+    legacy_tables = [
+        resource for logical_id, resource in tables.items() if logical_id.startswith("MessageContext")
+    ]
+    assert len(legacy_tables) == 1
+    assert legacy_tables[0]["DeletionPolicy"] == "Retain"
+
+
 def test_rust_candidate_is_opt_in_and_not_subscribed_to_inbound_sns() -> None:
     app = cdk.App(context={"rust_candidate": True})
     template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
