@@ -1,23 +1,17 @@
-"""Lambda entrypoint and bounded SMS orchestration.
+"""Offline evaluation and provider-support helpers for the former Python runtime.
 
-The entrypoint retains the original private helper names as a compatibility surface.
-Provider, persistence, and model details live in focused modules.
+The deployed request path is Rust. This module contains only reusable offline/evaluation logic;
+it has no Lambda entrypoint, SMS sender, or DynamoDB context persistence boundary.
 """
 
 import json
 import logging
-import os
 import re
-import time
 from collections.abc import Mapping, Sequence
-from functools import lru_cache
-from typing import Any, cast
+from typing import cast
 from urllib.request import urlopen
 
-import boto3
-from botocore.config import Config
-
-from . import bedrock, context_store, fire_ban, location, models, retrieval, weather
+from . import bedrock, fire_ban, location, models, retrieval, weather
 from .bedrock import (
     ADVICE_SYSTEM_PROMPT,
     CLARIFICATION_SYSTEM_PROMPT,
@@ -47,12 +41,9 @@ from .models import (
     LocationCandidate,
     LocationResolution,
 )
-from .telemetry import emit_event
-from .tracing import trace_span
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
-_COLD_START = True
 INTERPRETATION_SCHEMA_KEYS = {
     "intent",
     "location_text",
@@ -91,90 +82,6 @@ COORDINATE_PATTERN = re.compile(
     r"(?:\b(?:lat(?:itude)?|y)\s*[:=]?\s*)?(?P<latitude>[+-]?\d{1,3}(?:\.\d+)?)\s*(?:°|º)?\s*(?P<latitude_hemisphere>[NS])?\s*(?:,|/|;|\s+)\s*(?:\b(?:lon(?:gitude)?|lng|x)\s*[:=]?\s*)?(?P<longitude>[+-]?\d{1,3}(?:\.\d+)?)\s*(?:°|º)?\s*(?P<longitude_hemisphere>[EW])?\b",
     re.IGNORECASE,
 )
-
-
-def lambda_handler(event: Mapping[str, Any], _context: object) -> dict[str, str]:
-    global _COLD_START
-    cold_start = _COLD_START
-    _COLD_START = False
-    started = time.perf_counter()
-    message = _extract_message(event)
-    if message is None:
-        LOGGER.info("sms_event_ignored reason=unsupported_event")
-        emit_event("sms_ignored", "ignored", outcome="unsupported_event", metrics={"MessagesIgnored": 1})
-        return {"status": "ignored", "reason": "unsupported_event"}
-    sender = message.get("originationNumber")
-    user_phone = _normalized_e164(sender)
-    allowed_sender = os.environ.get("ALLOWED_PHONE_NUMBER")
-    if sender != allowed_sender and (not user_phone or user_phone != _normalized_e164(allowed_sender)):
-        LOGGER.info("sms_event_ignored reason=sender_not_allowed")
-        emit_event("sms_ignored", "ignored", outcome="sender_not_allowed", metrics={"MessagesIgnored": 1})
-        return {"status": "ignored", "reason": "sender_not_allowed"}
-    delivery_mode = _delivery_mode()
-    message_id = message.get("_sns_message_id")
-    created_at = _context_created_at(message.get("_sns_timestamp"), message_id)
-    context_phone = user_phone or (sender if isinstance(sender, str) else "")
-    history, readable = _load_context(context_phone)
-    body = message.get("messageBody", "")
-    reserved = _reserve_interaction(context_phone, str(message_id or ""), created_at, body)
-    if reserved is None:
-        LOGGER.info("sms_event_failed reason=storage_unavailable")
-        emit_event("sms_ignored", "failure", outcome="storage_unavailable")
-        return {"status": "failed", "reason": "storage_unavailable"}
-    if not reserved:
-        LOGGER.info("sms_event_ignored reason=duplicate_delivery")
-        emit_event("sms_ignored", "ignored", outcome="duplicate_delivery", metrics={"MessagesIgnored": 1})
-        return {"status": "ignored", "reason": "duplicate_delivery"}
-    response_text = _reply_for_message(body, history, readable)
-    if delivery_mode == "capture":
-        _log_captured_response(str(message_id or ""), response_text)
-    else:
-        try:
-            with trace_span("sms.send", provider="end_user_messaging"):
-                _sms_client().send_text_message(
-                    DestinationPhoneNumber=sender, OriginationIdentity=os.environ["ORIGINATION_IDENTITY"],
-                    MessageBody=response_text, MessageType="TRANSACTIONAL",
-                )
-        except Exception as error:  # noqa: BLE001
-            LOGGER.info("sms_send_failed error_type=%s", type(error).__name__)
-            emit_event("sms_send_failed", "failure", outcome="sms_send_failed", metrics={"SmsSendFailures": 1})
-            return {"status": "failed", "reason": "sms_send_failed"}
-    _complete_interaction(context_phone, str(message_id or ""), created_at, body, response_text)
-    LOGGER.info("sms_event_replied" if delivery_mode == "live" else "sms_event_captured")
-    duration_ms = (time.perf_counter() - started) * 1000
-    emit_event("sms_replied", "success", duration_ms=duration_ms, metrics={"MessagesReceived": 1, "RepliesSent": 1, "ProcessingDurationMs": duration_ms, "ColdStarts": int(cold_start)})
-    if delivery_mode == "capture":
-        return {"status": "captured", "delivery_mode": delivery_mode, "sms_api_called": "false", "sns_published": "false"}
-    return {"status": "replied"}
-
-
-def _delivery_mode() -> str:
-    """Return the explicit outbound policy and fail closed outside a test target."""
-    test_mode_value = os.environ.get("TEST_MODE", "false").strip().lower()
-    if test_mode_value not in {"true", "false"}:
-        raise RuntimeError("invalid_test_mode")
-    test_mode = test_mode_value == "true"
-    mode = os.environ.get("SMS_DELIVERY_MODE", "live").strip().lower()
-    deployment_environment = os.environ.get("DEPLOYMENT_ENVIRONMENT", "production").strip().lower()
-    if mode not in {"capture", "live"} or deployment_environment not in {"production", "test"}:
-        raise RuntimeError("invalid_sms_delivery_mode")
-    if mode == "capture" and (not test_mode or deployment_environment != "test"):
-        raise RuntimeError("capture_mode_not_permitted")
-    if test_mode and mode != "capture":
-        raise RuntimeError("test_mode_requires_capture")
-    return mode
-
-
-def _log_captured_response(test_run_id: str, response_text: str) -> None:
-    """Log synthetic-test output only; never include sender or destination identifiers."""
-    LOGGER.info(json.dumps({
-        "event": "test_response_captured",
-        "test_run_id": test_run_id,
-        "delivery_mode": "capture",
-        "response": response_text,
-        "sms_api_called": False,
-        "sns_published": False,
-    }, separators=(",", ":")))
 
 
 def _reply_for_message(user_text: object, history: Sequence[ContextInteraction] = (), context_readable: bool = True) -> str:
@@ -235,24 +142,6 @@ def _reply_for_message(user_text: object, history: Sequence[ContextInteraction] 
     if intent == "unclear":
         return _clarification_reply(text, history)
     return _bedrock_reply(text, history)
-
-
-def _extract_message(event: Mapping[str, Any]) -> Mapping[str, Any] | None:
-    records = event.get("Records")
-    if not isinstance(records, list) or not records:
-        return None
-    sns_record = records[0].get("Sns") if isinstance(records[0], Mapping) else None
-    raw_message = sns_record.get("Message") if isinstance(sns_record, Mapping) else None
-    if not isinstance(raw_message, str):
-        return None
-    try:
-        message = json.loads(raw_message)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(message, Mapping):
-        return None
-    sns_mapping = cast(Mapping[str, Any], sns_record)
-    return {**message, "_sns_message_id": sns_mapping.get("MessageId", ""), "_sns_timestamp": sns_mapping.get("Timestamp", "")}
 
 
 def _weather_request_reply(user_text: str, current_coordinates: tuple[float, float] | None, history: Sequence[ContextInteraction], context_readable: bool, context: dict[str, object]) -> str:
@@ -720,49 +609,6 @@ def _coordinates_from_context(context: Mapping[str, object]) -> tuple[float, flo
         return None
     latitude, longitude = float(latitude), float(longitude)
     return (latitude, longitude) if -90 <= latitude <= 90 and -180 <= longitude <= 180 else None
-
-
-def _context_created_at(sns_timestamp: object, message_id: object) -> str:
-    timestamp = sns_timestamp if isinstance(sns_timestamp, str) and sns_timestamp else str(int(time.time() * 1000))
-    identifier = message_id if isinstance(message_id, str) and message_id else "missing-id"
-    return f"{timestamp}#{identifier}"
-
-
-def _normalized_e164(value: object) -> str:
-    return context_store.normalized_e164(value)
-
-
-@lru_cache(maxsize=1)
-def _sms_client() -> Any:
-    with trace_span("client.init", provider="end_user_messaging"):
-        try:
-            return boto3.client("pinpoint-sms-voice-v2", config=Config(connect_timeout=5, read_timeout=5, retries={"mode": "standard", "max_attempts": 1}))
-        except TypeError:
-            return boto3.client("pinpoint-sms-voice-v2")
-
-
-def _load_context(user_phone: str) -> tuple[list[ContextInteraction], bool]:
-    return context_store.load_context(user_phone)
-
-
-def _context_from_item(item: Mapping[str, Any]) -> ContextInteraction | None:
-    return context_store._context_from_item(item)
-
-
-def _reserve_interaction(user_phone: str, message_id: str, created_at: str, input_body: object) -> bool | None:
-    return context_store.reserve_interaction(user_phone, message_id, created_at, input_body)
-
-
-def _complete_interaction(user_phone: str, message_id: str, created_at: str, input_body: object, output_body: str) -> None:
-    context_store.complete_interaction(user_phone, message_id, created_at, input_body, output_body)
-
-
-def _bedrock_context(current: str, history: Sequence[ContextInteraction]) -> str:
-    return bedrock.bedrock_context(current, history)
-
-
-def _interpretation_bedrock_context(current: str, history: Sequence[ContextInteraction]) -> str:
-    return bedrock.interpretation_bedrock_context(current, history)
 
 
 def _bedrock_converse(*, system_prompt: str, user_text: str, max_tokens: int, temperature: float, history: Sequence[ContextInteraction] = (), prioritize_current: bool = False, operation_budget: str = "standard") -> str:

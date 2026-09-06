@@ -96,7 +96,7 @@ jobs:
         run: ./scripts/check-mypy-negative.sh
       - name: Unit tests
         if: steps.changes.outputs.docs_only != 'true'
-        run: pytest -m 'not legacy_python_runtime'
+        run: pytest
       - name: Offline evaluation gates
         if: steps.changes.outputs.docs_only != 'true'
         run: pytest -m 'eval_model or eval_location' --eval-mode=offline --eval-report-dir=local/evaluations/ci

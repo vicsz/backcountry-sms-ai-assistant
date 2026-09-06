@@ -4,16 +4,14 @@ from typing import Any
 
 import pytest
 
-from backcountry_sms import bedrock, context_store, handler, location
+from backcountry_sms import bedrock, location
 
 
 @pytest.mark.parametrize(
     ("factory", "module", "service"),
     [
         (bedrock._bedrock_client, bedrock, "bedrock-runtime"),
-        (context_store._dynamodb_client, context_store, "dynamodb"),
         (location._amazon_places_client, location, "geo-places"),
-        (handler._sms_client, handler, "pinpoint-sms-voice-v2"),
     ],
 )
 def test_aws_clients_are_reused_within_a_lambda_process(

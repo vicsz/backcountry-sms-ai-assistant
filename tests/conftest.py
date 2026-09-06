@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from backcountry_sms import bedrock, context_store, handler, location, weather
+from backcountry_sms import bedrock, location, weather
 from backcountry_sms.models import DEFAULT_MODEL_ID
 from tests.evals import reporting
 
@@ -64,7 +64,7 @@ def pytest_configure(config: object) -> None:
 @pytest.fixture(autouse=True)
 def clear_cached_aws_clients() -> None:
     """Keep injected test clients isolated while production caches stay process-local."""
-    factories = (bedrock._bedrock_client, bedrock._rag_bedrock_client, context_store._dynamodb_client, location._amazon_places_client, handler._sms_client)
+    factories = (bedrock._bedrock_client, bedrock._rag_bedrock_client, location._amazon_places_client)
     for factory in factories:
         factory.cache_clear()
     location.clear_location_cache()

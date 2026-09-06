@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from backcountry_sms import handler
+from backcountry_sms import support as handler
 
 pytestmark = [
     pytest.mark.integration,

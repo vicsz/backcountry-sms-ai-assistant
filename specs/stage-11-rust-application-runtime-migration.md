@@ -22,9 +22,11 @@ active X-Ray tracing, the Python ADOT Lambda layer, and the existing SNS -> Lamb
 Bedrock, DynamoDB, and SMS topology. The CDK definition packages the repository asset and points
 the function at `backcountry_sms.handler.lambda_handler`.
 
-The source boundary for the runtime replacement is the complete set of application modules under
-`backcountry_sms/`: `handler.py`, `bedrock.py`, `context_store.py`, `location.py`, `weather.py`,
-`retrieval.py`, `fire_ban.py`, `models.py`, `telemetry.py`, and `tracing.py`. Evidence must
+The historical source boundary for the runtime replacement was the complete set of application
+modules under `backcountry_sms/`: `handler.py`, `bedrock.py`, `context_store.py`, `location.py`,
+`weather.py`, `retrieval.py`, `fire_ban.py`, `models.py`, `telemetry.py`, and `tracing.py`.
+The retired Python request boundary has since been removed; `support.py` remains only for offline
+evaluation/provider checks. Evidence must
 distinguish deployed behavior from locally implemented or fixture-only behavior; porting the local
 fire-ban implementation does not make its live data-ingestion path deployed.
 

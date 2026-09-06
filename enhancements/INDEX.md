@@ -15,3 +15,4 @@ ideas that are not yet scoped remain in [`docs/ideas.md`](../docs/ideas.md).
 | ENH-0008 | Retire the legacy Python context table safely | Implemented; detached; data disposed by ENH-0009 | Retain policy, safe CDK detach, no data deletion | `e46764e`, `94d6870` |
 | ENH-0009 | Dispose of retained legacy context data | Implemented; deletion verified | Metadata-only review, exact-table deletion, post-delete verification | `87dcb5f`, `500428e` |
 | ENH-0010 | Public repository release hygiene | Implemented locally; publication decision separate | Truthful status, privacy scan, generated-file hygiene, public documentation review | `1a68ed8` |
+| ENH-0011 | Remove dead Python request-runtime code | Implemented; Rust remains deployed runtime | No Python entrypoint/context store; retained support imports; Python/Rust validation gates | `01b06ff` |

@@ -6,11 +6,9 @@ output, failure fallbacks, and the adapter call path represented by deterministi
 contract suite is the required place to add coverage for deployed behavior.
 
 Python remains the implementation language for CDK and the evaluation/support tooling. The former
-Python request-runtime test file is marked `legacy_python_runtime`. It is retained as
-historical reference while selected support modules remain in the repository, but it is not run by
-CI and is not the authoritative definition of deployed request behavior. The Python handler and related modules
-remain only where evaluation or offline support explicitly requires them; CDK no longer creates a
-Python request or capture Lambda.
+Python request-runtime test file, Lambda entrypoint, SMS client, and DynamoDB context-store module
+have been removed. `backcountry_sms.support` remains only as an offline/evaluation helper surface;
+it is not a deployed request path.
 
 CI therefore runs the retained Python support groups alongside the Rust contract gate:
 
@@ -25,7 +23,7 @@ boundary or preserves a useful parity check.
 The following remain intentionally separate from ordinary tests: live Bedrock/provider calls,
 ingestion or refresh operations, deployed capture checks, and real SMS sends.
 
-The retained Python request modules are offline support/reference code, not a second deployed path.
-The normal CDK target rejects the former `rust_runtime=false` rollback switch and the former
+The retained Python provider, retrieval, fire-ban, ingestion, telemetry, tracing, and model modules
+are offline support/reference code, not a second deployed path. The normal CDK target rejects the former `rust_runtime=false` rollback switch and the former
 `python_capture` context. Removing the retained Python modules themselves is a separate cleanup
-because the evaluation and support tests still import selected helpers.
+because the evaluation, ingestion, and offline-support tests still import selected helpers.

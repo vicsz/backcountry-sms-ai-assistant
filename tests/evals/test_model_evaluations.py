@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from backcountry_sms import handler
+from backcountry_sms import support as handler
 from tests.evals.reporting import record_operation
 
 FIXTURES = json.loads((Path(__file__).parent / "fixtures/model_interpretation.json").read_text())

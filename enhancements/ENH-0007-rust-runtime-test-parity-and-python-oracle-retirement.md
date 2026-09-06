@@ -1,7 +1,7 @@
 # ENH-0007 — Rust runtime test parity and Python oracle retirement
 
-**Status:** Implemented locally; deployed request path remains Rust-only. The retained Python
-modules and historical runtime tests are not part of the deployed request path.
+**Status:** Implemented; deployed request path remains Rust-only. The remaining Python modules are
+support code; the historical runtime tests were subsequently removed by ENH-0011.
 
 ## Objective
 
@@ -20,8 +20,8 @@ SMS contract, provider behavior, RAG corpus, or deferred ingestion boundary.
 - Remove the Python request Lambda and Python capture twin from the CDK graph.
 - Reject the former `rust_runtime=false` rollback switch and `python_capture` context so a future
   synth cannot silently recreate a Python request path.
-- Stop running the `legacy_python_runtime` test group in CI. Retain those tests as historical
-  reference while the selected Python helpers remain useful to offline evaluation/support tests.
+- Stop treating the historical Python request-runtime test group as an active validation boundary.
+  Its final removal is tracked by ENH-0011.
 - Retain Python CDK, evaluation, fire-ban ingestion, retrieval tooling, and support modules.
 - Preserve the historical DynamoDB `MessageContext` resource in the template for a separate,
   explicitly reviewed infrastructure cleanup; the deployed Rust function uses the Rust context

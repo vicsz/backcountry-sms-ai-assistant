@@ -3,7 +3,8 @@ from pathlib import Path
 from statistics import quantiles
 from time import perf_counter
 
-from backcountry_sms import fire_ban, handler
+from backcountry_sms import fire_ban
+from backcountry_sms import support as handler
 from backcountry_sms.models import LocationCandidate, LocationResolution
 
 FIXTURE = Path(__file__).parent / "fixtures" / "stage-9-2-fire-ban-snapshot.json"

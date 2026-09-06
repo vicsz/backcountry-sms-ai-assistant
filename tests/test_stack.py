@@ -158,7 +158,7 @@ def test_demo_stack_defaults_to_rust_only_request_runtime() -> None:
     ]
     assert len(rust_functions) == 1
     assert all(
-        resource["Properties"].get("Handler") != "backcountry_sms.handler.lambda_handler"
+        not resource["Properties"].get("Handler", "").startswith("backcountry_sms.")
         for resource in functions.values()
     )
     subscriptions = template.find_resources("AWS::SNS::Subscription")
@@ -214,15 +214,16 @@ def test_rust_runtime_switches_primary_subscription_and_removes_python_request_l
     template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
 
     functions = template.find_resources("AWS::Lambda::Function")
-    python_functions = [
-        resource for resource in functions.values()
-        if resource["Properties"].get("Handler") == "backcountry_sms.handler.lambda_handler"
+    python_request_functions = [
+        resource
+        for resource in functions.values()
+        if resource["Properties"].get("Handler", "").startswith("backcountry_sms.")
     ]
     rust_functions = [
         resource for resource in functions.values()
         if resource["Properties"].get("Runtime") == "provided.al2023"
     ]
-    assert len(python_functions) == 0
+    assert python_request_functions == []
     assert len(rust_functions) == 1
     rust = rust_functions[0]["Properties"]
     assert rust["Handler"] == "bootstrap"
