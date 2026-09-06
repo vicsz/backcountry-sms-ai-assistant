@@ -41,7 +41,7 @@ environment.
 | Stage 6.1 — distributed tracing | Deployed; X-Ray/ADOT trace verified |
 | Stage 6.2 — reliability | Deployed; bounded retries, idempotency, and failure behavior verified |
 | Stage 6.3 — performance improvements | Deployed and measured; retained changes are evidence-backed |
-| Stage 6.3.1 — Nova Micro comparison | Measured; production remains on Nova 2 Lite |
+| Stage 6.3.1 — Nova Micro comparison | Measured; no Production environment is deployed; non-test default remains Nova 2 Lite |
 | Stage 8.1 — carrier-independent E2E capture | Deployed and verified without carrier traffic |
 | Stage 11 — Rust application runtime migration | Rust-only Demo request path deployed and verified; matched capture comparison, X-Ray spans, rollback drill, artifact hash, and 15-minute quiet observation passed; real SMS smoke test not run |
 

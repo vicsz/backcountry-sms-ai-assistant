@@ -16,6 +16,8 @@ between deployed Demo behavior, local experiments, proposed future targets, and 
 - Older specifications explicitly identify `production` as a future target; the deployed target
   remains Demo.
 - The duplicate sentence in `docs/testing.md` is corrected.
+- The stale, unreferenced root PNG architecture diagram is removed; `docs/aws-architecture.svg` is
+  the current architecture artifact.
 - Generated artifacts, local working material, credentials, private-key material, and
   account-specific deployment output remain ignored or untracked.
 
