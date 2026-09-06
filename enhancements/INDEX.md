@@ -13,3 +13,4 @@ ideas that are not yet scoped remain in [`docs/ideas.md`](../docs/ideas.md).
 | ENH-0006 | Python runtime boundary cleanup | Closed; rollback/oracle boundary superseded by ENH-0007 | Rust-only deployed target; ownership documentation | Current worktree |
 | ENH-0007 | Rust runtime test parity and Python oracle retirement | Implemented locally; final validation pending | Rust failure-path contracts; no Python request/capture Lambda; no Python oracle CI gate | Current worktree |
 | ENH-0008 | Retire the legacy Python context table safely | Implemented; physical data retained | Retain policy, safe CDK detach, no data deletion | Current worktree |
+| ENH-0009 | Dispose of retained legacy context data | Review gate passed; deletion pending | Metadata-only review, exact-table deletion, post-delete verification | Current worktree |
