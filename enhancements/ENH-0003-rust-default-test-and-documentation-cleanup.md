@@ -56,9 +56,9 @@ Non-goals:
 3. CI runs the pinned Rust format/check/test/clippy/package gates, Python lint/type/test gates,
    default Rust CDK synth, and explicit Python rollback synth. Documentation-only changes continue
    to skip runtime validation.
-4. Rust runtime contracts are the primary request-path test owner. Python runtime tests are marked
-   `legacy_python_runtime` and run as a separate compatibility gate; CDK/evaluation/support tests
-   remain in their existing Python locations.
+4. Rust runtime contracts are the primary request-path test owner. The former Python request
+   runtime tests were removed by ENH-0011; CDK/evaluation/support tests remain in their existing
+   Python locations.
 5. RAG documentation records the measured generic-metadata and negative-query limitation and
    explicitly defers freshness/source-date handling and ingestion/refresh work.
 6. Stage 11, Rust README, performance, status, and test-ownership wording is consistent with the
