@@ -22,8 +22,8 @@ Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed
 dedicated demo capture stack; `ENH-0003` covers Rust-default hardening and test/documentation
 cleanup; `ENH-0007` retires Python request/capture wiring and the CI oracle gate after Rust parity
 coverage; `ENH-0008` detached the unused Python-era context table while retaining its existing
-data; `ENH-0009` records the approved metadata-only review before deleting that retained table.
-This is the project's only deployed environment.
+data; `ENH-0009` deleted that retained table after an approved metadata-only review. This is the
+project's only deployed environment.
 
 ## Done — deployed and verified
 
@@ -84,8 +84,7 @@ This is the project's only deployed environment.
 1. Keep fire-ban live ingestion deferred; do not present local snapshots or normalized artifacts as live.
 2. Keep RAG freshness/source-date handling, corpus refresh, and recurring ingestion deferred until
    the metadata and live retrieval gates are separately authorized.
-3. Complete ENH-0009’s exact-table deletion and post-delete verification.
-4. Keep the retained Python support/reference modules classified and avoid deleting shared helpers
+3. Keep the retained Python support/reference modules classified and avoid deleting shared helpers
    until evaluation and ingestion dependencies are separately reviewed.
-5. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
+4. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
    commit.

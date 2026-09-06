@@ -1,6 +1,6 @@
 # ENH-0008 — Retire the legacy Python context table safely
 
-**Status:** Implemented; physical table was retained and detached from CDK ownership.
+**Status:** Implemented; physical table was retained, detached, and later deleted under ENH-0009.
 
 ## Objective
 

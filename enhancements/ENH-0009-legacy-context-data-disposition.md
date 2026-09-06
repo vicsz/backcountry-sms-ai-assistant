@@ -1,6 +1,6 @@
 # ENH-0009 — Dispose of retained legacy context data
 
-**Status:** Review gate passed; deletion authorized and pending execution.
+**Status:** Implemented; exact retained table deleted and verified absent.
 
 ## Objective
 
@@ -14,6 +14,8 @@ CDK no longer use it, and that no backup or retention dependency requires preser
 - Metadata-only inspection found an `ACTIVE` table with 30 items and approximately 8.9 KB of data.
 - Point-in-time recovery is disabled and no on-demand DynamoDB backups were listed.
 - No message bodies, phone values, or table contents were read or exported during the review.
+- The exact retained table was deleted after the review gate passed; no export or snapshot was
+  created.
 
 ## Scope
 
@@ -29,7 +31,7 @@ CDK no longer use it, and that no backup or retention dependency requires preser
 
 ## Acceptance criteria
 
-1. The exact retained legacy table is deleted only after the metadata-only review gate passes.
+1. The exact retained legacy table was deleted only after the metadata-only review gate passed.
 2. A follow-up metadata check reports that the table no longer exists.
 3. CloudFormation still has no legacy table resource and the Rust context table remains present.
 4. Rust contract tests, targeted Python/CDK checks, and `git diff --check` pass.
