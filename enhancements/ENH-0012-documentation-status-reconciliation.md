@@ -40,4 +40,4 @@ No deployment or live check required. This change cannot affect runtime behavior
 
 ## Implementing commit
 
-`68f732d ENH-0012 -- reconcile post-cutover documentation`
+`6da39f0 ENH-0012 -- reconcile post-cutover documentation`
