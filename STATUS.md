@@ -58,7 +58,7 @@ only deployed environment.
 | Stage 9.3.1 — Ontario Parks guide corpus | MVP corpus generated locally; rerunnable generator and refresh of time-sensitive park information deferred |
 | Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted retrieval smoke test passed without SMS/SNS; live baseline still returns generic corpus metadata and is not promoted |
 | Stage 9.3.3 — Knowledge-base retrieval tuning | Local park-scoping and time-sensitive routing guardrails deployed with Rust; offline benchmark retained as a diagnostic baseline; metadata, freshness, refresh, and live ranking gates remain deferred |
-| Stage 11.1 — Retained Python support cleanup | Implemented locally; former Python request entrypoint/context store and historical request-runtime tests removed; CDK, ingestion, evaluation, and offline support retained |
+| Stage 11.1 — Retained Python support cleanup | Implemented and CI-verified; former Python request entrypoint/context store and historical request-runtime tests removed; CDK, ingestion, evaluation, and offline support retained |
 
 ## Not done — proposed or deferred
 
@@ -87,7 +87,7 @@ only deployed environment.
 1. Keep fire-ban live ingestion deferred; do not present local snapshots or normalized artifacts as live.
 2. Keep RAG freshness/source-date handling, corpus refresh, and recurring ingestion deferred until
    the metadata and live retrieval gates are separately authorized.
-3. Keep the retained Python support/reference modules classified and avoid deleting shared helpers
-   until evaluation and ingestion dependencies are separately reviewed.
+3. Keep the retained Python support/reference modules explicitly classified; do not delete shared
+   helpers without reviewing their active CDK, evaluation, and ingestion dependencies.
 4. Decide separately whether to add a license and publish a sanitized public release after the
    final history scan.

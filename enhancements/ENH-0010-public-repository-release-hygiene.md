@@ -1,6 +1,6 @@
 # ENH-0010 — Public repository release hygiene
 
-**Status:** Implemented locally; publication decision remains separate.
+**Status:** Implemented; publication decision remains separate.
 
 ## Objective
 

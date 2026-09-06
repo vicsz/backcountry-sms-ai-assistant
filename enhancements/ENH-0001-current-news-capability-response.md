@@ -34,10 +34,12 @@ unrelated Ontario Parks retrieval.
 Added deterministic current-news/current-statistics detection before model and Ontario Parks
 retrieval, with a bounded response describing unavailable real-time data and supported capabilities.
 
-## Acceptance and capability tests
+## Historical acceptance and capability coverage
 
-- `tests/test_handler.py::test_enh_0001_current_news_explains_data_boundary_without_model_or_retrieval`
-  protects routing, capability wording, and the one-segment limit.
+The former Python request-runtime test named
+`test_enh_0001_current_news_explains_data_boundary_without_model_or_retrieval` protected routing,
+capability wording, and the one-segment limit. That test file was removed by ENH-0011; current
+deployed request-path ownership is recorded in the Rust contract suite.
 
 ## Validation results
 

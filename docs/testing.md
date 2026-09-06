@@ -24,6 +24,7 @@ The following remain intentionally separate from ordinary tests: live Bedrock/pr
 ingestion or refresh operations, deployed capture checks, and real SMS sends.
 
 The retained Python provider, retrieval, fire-ban, ingestion, telemetry, tracing, and model modules
-are offline support/reference code, not a second deployed path. The normal CDK target rejects the former `rust_runtime=false` rollback switch and the former
-`python_capture` context. Removing the retained Python modules themselves is a separate cleanup
-because the evaluation, ingestion, and offline-support tests still import selected helpers.
+are offline support/reference code, not a second deployed path. The normal CDK target rejects the
+former `rust_runtime=false` rollback switch and the former `python_capture` context. Further module
+removal requires a separate dependency review because evaluation, ingestion, and offline-support
+tests still import selected helpers.

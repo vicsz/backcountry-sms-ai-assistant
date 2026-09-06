@@ -126,7 +126,7 @@ the orchestrator commits.
 During implementation, use targeted checks such as:
 
 ```text
-.venv/bin/pytest tests/test_handler.py -k precedence
+.venv/bin/pytest tests/test_stack.py -k rust_runtime
 ```
 
 After the reviewer has completed and any focused fix is applied, the orchestrator classifies the

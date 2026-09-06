@@ -45,7 +45,7 @@ in corpus is current.
 
 ## Acceptance tests
 
-- `tests/test_retrieval.py` and `tests/test_handler.py` pass.
+- `tests/test_retrieval.py` and the Rust request-path contract suite pass.
 - `rust/tests/runtime_contracts.rs` covers the same deployed request-path boundaries.
 - `scripts/retrieval_eval.py` runs offline without AWS and emits redacted aggregate evidence.
 - A deployed live baseline remains unchanged until a later explicit promotion gate.

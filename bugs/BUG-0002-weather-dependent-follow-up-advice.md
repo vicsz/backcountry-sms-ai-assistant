@@ -81,26 +81,31 @@ Implemented locally:
 
 No activity-specific answer or location was hardcoded.
 
-## Regression tests
+## Historical regression coverage
 
-- `tests/test_handler.py::test_bug_0002_prompt_routes_weather_dependent_outdoor_decisions` protects
-  the semantic extraction and conditional-advice prompt contract.
-- `tests/test_handler.py::test_bug_0002_history_location_with_qualifier_is_canonicalized` protects
-  grounded history labels when the model adds a geographic qualifier.
-- `tests/test_handler.py::test_bug_0002_deictic_history_location_uses_newest_grounded_label` protects
-  `this lake`/`the lake` follow-ups when the model returns a deictic placeholder.
-- `tests/test_handler.py::test_bug_0002_history_follow_up_discards_inherited_coordinates` protects
-  the rule that coordinates are not carried from history into a new SMS.
-- `tests/test_handler.py::test_bug_0002_model_current_label_is_downgraded_to_grounded_history`
-  protects against the model labeling a prior location as current on a follow-up.
+The former Python request-runtime suite covered the following named cases before ENH-0011 removed
+that test boundary:
+
+- `test_bug_0002_prompt_routes_weather_dependent_outdoor_decisions` covered semantic extraction and
+  the conditional-advice prompt contract.
+- `test_bug_0002_history_location_with_qualifier_is_canonicalized` covered grounded history labels
+  when the model adds a geographic qualifier.
+- `test_bug_0002_deictic_history_location_uses_newest_grounded_label` covered `this lake`/`the lake`
+  follow-ups when the model returns a deictic placeholder.
+- `test_bug_0002_history_follow_up_discards_inherited_coordinates` covered the rule that coordinates
+  are not carried from history into a new SMS.
+- `test_bug_0002_model_current_label_is_downgraded_to_grounded_history` covered protection against
+  the model labeling a prior location as current on a follow-up.
 - `tests/test_weather_cache.py::test_noon_weather_window_selects_midday_period` protects selection
   of the requested midday forecast period.
 - Model-eval cases `BUG-0002-CROSSING-001` and `BUG-0002-TARP-001` will cover history-grounded
   weather-dependent follow-ups when the Bedrock-live evaluation suite is run.
-- `tests/test_handler.py::test_bug_0002_weather_dependent_crossing_bypasses_rag_after_misclassification`
-  protects deterministic routing for planning questions.
-- `tests/test_handler.py::test_bug_0002_rejects_absolute_safety_advice` protects bounded safety
-  language.
+- `test_bug_0002_weather_dependent_crossing_bypasses_rag_after_misclassification` covered
+  deterministic routing for planning questions.
+- `test_bug_0002_rejects_absolute_safety_advice` covered bounded safety language.
+
+Current deployed request-path ownership is recorded in the Rust contract suite; the historical
+names above are retained as evidence of the original regression coverage.
 
 ## Validation results
 

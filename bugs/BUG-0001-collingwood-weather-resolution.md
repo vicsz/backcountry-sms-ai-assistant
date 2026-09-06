@@ -69,18 +69,22 @@ Commit `5ba8fa3` (`Improve Ontario named-place resolution`) made the smallest sc
 Non-goals: no hardcoded Collingwood coordinates, no default location when the user provides no place,
 no automatic acceptance of model-invented coordinates, and no real SMS delivery.
 
-## Regression tests
+## Historical regression coverage
 
-- `tests/test_handler.py::test_bug_0001_collingwood_named_location_reaches_provider_backed_weather_path`
-  verifies that a valid Collingwood interpretation reaches named-place resolution and weather
-  synthesis.
-- `tests/test_handler.py::test_bug_0001_unqualified_common_place_prefers_ontario_candidate` verifies
-  that an Ontario Collingwood candidate outranks a same-name U.S. candidate even when the U.S.
-  provider score is higher.
-- `tests/test_handler.py::test_bug_0001_interpreter_prompt_sets_canada_ontario_named_place_defaults`
-  protects the interpretation contract wording.
-- `tests/test_handler.py::test_bug_0001_current_grounded_location_can_fill_omitted_redundant_field`
-  protects the deployed model behavior that originally caused this bug.
+The former Python request-runtime suite covered the following named cases before ENH-0011 removed
+that test boundary:
+
+- `test_bug_0001_collingwood_named_location_reaches_provider_backed_weather_path` covered a valid
+  Collingwood interpretation reaching named-place resolution and weather synthesis.
+- `test_bug_0001_unqualified_common_place_prefers_ontario_candidate` covered Ontario Collingwood
+  outranking a same-name U.S. candidate even when the U.S. provider score was higher.
+- `test_bug_0001_interpreter_prompt_sets_canada_ontario_named_place_defaults` protected the
+  interpretation contract wording.
+- `test_bug_0001_current_grounded_location_can_fill_omitted_redundant_field` protected the deployed
+  model behavior that originally caused this bug.
+
+Current deployed request-path ownership is recorded in the Rust contract suite; the historical
+names above are retained as evidence of the original regression coverage.
 
 The first deployed capture after commit `5ba8fa3` failed with the redacted outcome
 `weather_extraction_ungrounded_current_location`, so the fix remains subject to a second deployment
