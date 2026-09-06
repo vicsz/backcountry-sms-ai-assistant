@@ -1,0 +1,2 @@
+# Optional local-only RAG demonstration dependency; never packaged into Lambda or CDK.
+sentence-transformers>=5,<6

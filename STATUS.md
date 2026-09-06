@@ -58,6 +58,7 @@ only deployed environment.
 | Stage 9.3.1 — Ontario Parks guide corpus | MVP corpus generated locally; rerunnable generator and refresh of time-sensitive park information deferred |
 | Stage 9.3.2 — Ontario Parks RAG MVP | Implemented and verified on the dedicated capture-mode test stack; one-time ingestion and a redacted retrieval smoke test passed without SMS/SNS; live baseline still returns generic corpus metadata and is not promoted |
 | Stage 9.3.3 — Knowledge-base retrieval tuning | Local park-scoping and time-sensitive routing guardrails deployed with Rust; offline benchmark retained as a diagnostic baseline; metadata, freshness, refresh, and live ranking gates remain deferred |
+| Stage 9.3.4 — RAG corpus and tuning evidence pack | Implemented locally; section-first corpus profile, BGE semantic demo, hybrid comparison, 16-case fixture, and redacted report; Bedrock/Titan promotion remains deferred |
 | Stage 11.1 — Retained Python support cleanup | Implemented and CI-verified; former Python request entrypoint/context store and historical request-runtime tests removed; CDK, ingestion, evaluation, and offline support retained |
 
 ## Not done — proposed or deferred

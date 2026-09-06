@@ -1,0 +1,21 @@
+{
+  "fixture_version": "stage-9.3.4-section-v1",
+  "cases": [
+    {"case_id": "algonquin.activities.direct", "question": "What activities does Algonquin list?", "class": "supported", "gold_records": ["algonquin-provincial-park.activities"]},
+    {"case_id": "algonquin.facilities.direct", "question": "What facilities and rentals are listed for Algonquin Provincial Park?", "class": "supported", "gold_records": ["algonquin-provincial-park.facilities"]},
+    {"case_id": "arrowhead.rentals.direct", "question": "Where can I rent a canoe at Arrowhead?", "class": "supported", "gold_records": ["arrowhead-provincial-park.facilities"]},
+    {"case_id": "killarney.camping.direct", "question": "Does Killarney have backcountry camping?", "class": "supported", "gold_records": ["killarney-provincial-park.activities", "killarney-provincial-park.facilities"]},
+    {"case_id": "algonquin.activities.paraphrase", "question": "What can visitors do at Algonquin according to the guide?", "class": "supported", "gold_records": ["algonquin-provincial-park.activities"]},
+    {"case_id": "arrowhead.facilities.paraphrase", "question": "Which amenities are listed for Arrowhead Provincial Park?", "class": "supported", "gold_records": ["arrowhead-provincial-park.facilities"]},
+    {"case_id": "killbear.facilities.direct", "question": "What facilities are listed for Killbear Provincial Park?", "class": "supported", "gold_records": ["killbear-provincial-park.facilities"]},
+    {"case_id": "sandbanks.activities.direct", "question": "What activities are listed for Sandbanks?", "class": "supported", "gold_records": ["sandbanks-provincial-park.activities"]},
+    {"case_id": "bon-echo.camping.direct", "question": "What camping types does Bon Echo list?", "class": "supported", "gold_records": ["bon-echo-provincial-park.activities", "bon-echo-provincial-park.facilities"]},
+    {"case_id": "multi.canoeing", "question": "Which parks mention canoeing and boat launches?", "class": "supported", "gold_records": ["algonquin-provincial-park.activities", "algonquin-provincial-park.facilities", "arrowhead-provincial-park.activities", "arrowhead-provincial-park.facilities"]},
+    {"case_id": "multi.camping", "question": "Compare camping options at Algonquin and Killarney.", "class": "supported", "gold_records": ["algonquin-provincial-park.activities", "killarney-provincial-park.activities"]},
+    {"case_id": "portage.hours", "question": "What are the current hours and prices at the Portage Store?", "class": "negative", "gold_records": []},
+    {"case_id": "unknown.park", "question": "Does NeverListed Park have winter camping?", "class": "negative", "gold_records": []},
+    {"case_id": "fire.current", "question": "Is Algonquin under a fire ban today?", "class": "current-status", "gold_records": []},
+    {"case_id": "operations.current", "question": "Is Arrowhead open tomorrow and are sites available?", "class": "current-status", "gold_records": []},
+    {"case_id": "reservation.current", "question": "Can I reserve an Algonquin campsite this weekend?", "class": "current-status", "gold_records": []}
+  ]
+}
