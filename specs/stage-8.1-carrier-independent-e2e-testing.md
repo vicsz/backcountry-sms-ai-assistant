@@ -5,6 +5,10 @@
 Complete. The dedicated test stack is deployed and verified with direct Lambda invocations;
 carrier traffic was not used.
 
+The repository currently has no deployed Production environment. References to Production below
+describe the intended future target and its safety boundary; current deployed verification is on
+the Demo stack.
+
 ## Goal
 
 Allow the deployed assistant to run realistic end-to-end tests without sending or receiving real

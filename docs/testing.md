@@ -6,7 +6,7 @@ output, failure fallbacks, and the adapter call path represented by deterministi
 contract suite is the required place to add coverage for deployed behavior.
 
 Python remains the implementation language for CDK and the evaluation/support tooling. The former
-The former Python request-runtime test file is marked `legacy_python_runtime`. It is retained as
+Python request-runtime test file is marked `legacy_python_runtime`. It is retained as
 historical reference while selected support modules remain in the repository, but it is not run by
 CI and is not the authoritative definition of deployed request behavior. The Python handler and related modules
 remain only where evaluation or offline support explicitly requires them; CDK no longer creates a

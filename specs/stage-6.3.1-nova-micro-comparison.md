@@ -2,9 +2,11 @@
 
 ## Status
 
-Complete; measured in the isolated supported-region test stack. Production remains on Nova 2 Lite
-because Nova Micro is unavailable in `ca-central-1` and the small matched sample did not establish
-a clean quality win.
+Complete; measured in the isolated supported-region test stack. No Production environment is
+deployed in this repository; the non-test default remains Nova 2 Lite because Nova Micro is
+unavailable in `ca-central-1` and the small matched sample did not establish a clean quality win.
+
+References to `production` below describe an intended future target, not deployed evidence.
 
 ## Goal
 
@@ -16,7 +18,7 @@ comparable—retain Nova Micro as the runtime model after the explicit decision 
 
 ## Region and access constraint
 
-Model access must be checked before deployment. The current production region is
+Model access must be checked before deployment. The intended future production region is
 `ca-central-1`; Nova Micro availability is not assumed there. If it is unavailable in that region,
 run the matched experiment against a separately identified test stack in a supported Bedrock
 region, recording the region change as a comparison limitation. Never change the production

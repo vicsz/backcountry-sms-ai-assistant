@@ -40,9 +40,9 @@ DynamoDB SMS thread context, provider lookups, and Amazon Bedrock, then sends th
 through the AWS End User Messaging SMS API.
 
 The source-backed extensions add an Amazon Bedrock Knowledge Base backed by an Amazon S3 Vectors
-vector database over an S3-curated Ontario Parks corpus. Fire-ban geospatial lookup and its
-versioned S3/Athena ingestion are specified and exercised locally, but the live ingestion path is
-explicitly deferred.
+vector database over an S3-curated Ontario Parks corpus. Fire-ban geospatial lookup and its local
+normalization are specified and exercised locally; the versioned S3/Athena ingestion path is
+proposed but explicitly deferred.
 
 The Ontario Parks Knowledge Base, S3 Vectors, and one-time snapshot ingestion are deployed on the
 Demo target. Their freshness/source-date contract and recurring refresh remain deferred. The
@@ -52,24 +52,12 @@ Messaging SMS API.
 
 ## How I built it
 
-This project was developed as a personal AI application engineering exercise using specification-
-driven development with Codex on a personal ChatGPT Plus plan. The efficient Luna model was the
-main model used for implementation and review. I also made heavy use of GPT-Live-1 voice
-conversations and ChatGPT iOS remote access to reason through designs and monitor delegated jobs.
+This project was developed as a personal AI application engineering exercise using
+specification-driven development and AI-assisted implementation.
 
 The workflow is deliberately structured: define one bounded specification, implement it, test it,
 perform an independent review, run the applicable validation gate, and then perform explicit
 deployment or live verification.
-
-> **GPT-5.6 Luna was surprisingly capable.** It did most of the implementation and review work for
-> this project when paired with a clear specification, structured workflow, and validation gates.
-
-> **GPT-Live-1 was useful as a back-and-forth thinking partner.** I used it extensively for
-> brainstorming and exploring ideas while away from the desk, including while biking to work.
-> ChatGPT's CarPlay support made that kind of hands-free conversation more useful on the move.
-
-> **ChatGPT Remote on iOS was also extremely useful.** It let me kick off long-running
-> specification implementations, then monitor and guide the agents while away from the desk.
 
 ## Technical snapshot
 
@@ -89,7 +77,7 @@ Bot:   Burnt Island Lake: 12 C tomorrow, 60% chance of rain, gusts up to 28 km/h
 ```text
 User:  What should I know before visiting Algonquin?
 Bot:   The park guide covers access, facilities, camping areas, and trip-planning context.
-       Current fire-ban status: a fire ban is in effect.
+       The example deliberately omits current fire-ban status; live ingestion is deferred.
 ```
 
 The assistant is intentionally concise: the SMS boundary is part of the product design.
@@ -103,7 +91,7 @@ source boundaries, output limits, and failure behavior. The project demonstrates
 - deterministic code for facts, coordinates, source precedence, output limits, and fallbacks;
 - short-lived SMS thread context in DynamoDB;
 - RAG through an Amazon Bedrock Knowledge Base for stable Ontario Parks information;
-- S3 and Athena for versioned fire-ban and geospatial data;
+- local fire-ban normalization plus proposed S3/Athena ingestion;
 - automated tests, provider evaluations, model evaluations, and LLM-as-judge assessment;
 - application guardrails, observability, tracing, performance measurement, and cost-aware design.
 
