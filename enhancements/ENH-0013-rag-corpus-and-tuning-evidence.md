@@ -45,4 +45,4 @@ comparison baseline and is not re-ingested or promoted by this enhancement.
 
 ## Implementing commit
 
-To be recorded after the change is committed.
+`7125ede` — `ENH-0013 -- add RAG tuning evidence pack`

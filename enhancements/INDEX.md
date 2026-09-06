@@ -17,4 +17,4 @@ ideas that are not yet scoped remain in [`docs/ideas.md`](../docs/ideas.md).
 | ENH-0010 | Public repository release hygiene | Implemented; publication decision separate | Truthful status, privacy scan, generated-file hygiene, public documentation review | `1a68ed8`, `d5ddf13` |
 | ENH-0011 | Remove dead Python request-runtime code | Implemented; Rust remains deployed runtime | No Python entrypoint/context store; retained support imports; Python/Rust validation gates | `fc02fdc`, `f61a74e` |
 | ENH-0012 | Reconcile post-cutover documentation | Implemented; documentation-only | No stale active references to deleted Python request-runtime tests; status metadata reconciled | `6da39f0` |
-| ENH-0013 | RAG corpus and tuning evidence pack | Implemented locally; Bedrock promotion deferred | Section-first records, local BGE/hybrid demo, expanded golden cases, redacted tuning report | Current change |
+| ENH-0013 | RAG corpus and tuning evidence pack | Implemented locally; Bedrock promotion deferred | Section-first records, local BGE/hybrid demo, expanded golden cases, redacted tuning report | `7125ede` |
