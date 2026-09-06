@@ -8,7 +8,7 @@ from backcountry_sms.models import DEFAULT_MODEL_ID, NOVA_MICRO_MODEL_ID
 from infrastructure.sms_assistant_stack import BackcountrySmsAssistantStack
 
 
-def test_stack_creates_inbound_topic_and_echo_lambda() -> None:
+def test_stack_creates_inbound_topic_and_rust_lambda() -> None:
     app = cdk.App()
     stack = BackcountrySmsAssistantStack(app, "TestStack")
     template = Template.from_stack(stack)
@@ -51,28 +51,22 @@ def test_stack_creates_inbound_topic_and_echo_lambda() -> None:
             "Resource": {"Fn::GetAtt": ["OntarioParksGuideKnowledgeBase", "KnowledgeBaseArn"]},
         }])}},
     )
-    template.has_resource_properties(
-        "AWS::Lambda::Function",
-        {
-            "Handler": "backcountry_sms.handler.lambda_handler",
-            "Runtime": "python3.12",
-            "Timeout": 25,
-            "TracingConfig": {"Mode": "Active"},
-            "Environment": {
-                "Variables": Match.object_like({"AWS_LAMBDA_EXEC_WRAPPER": "/opt/otel-instrument"}),
-            },
-        },
-    )
     outputs = template.to_json()["Outputs"]
     assert outputs["OntarioParksRegion"]["Value"] == {"Ref": "AWS::Region"}
     assert outputs["OntarioParksEmbeddingModel"]["Value"] == "amazon.titan-embed-text-v2:0"
     assert outputs["OntarioParksChunking"]["Value"] == "fixed-size:300-tokens:30-token-overlap"
     assert len(outputs["OntarioParksCorpusSha256"]["Value"]) == 64
-    lambda_resource = next(
-        resource for resource in template.find_resources("AWS::Lambda::Function").values()
-        if resource["Properties"].get("Handler") == "backcountry_sms.handler.lambda_handler"
+    template.has_resource_properties(
+        "AWS::Lambda::Function",
+        {
+            "Handler": "bootstrap",
+            "Runtime": "provided.al2023",
+            "Architectures": ["x86_64"],
+            "Timeout": 25,
+            "MemorySize": 128,
+            "TracingConfig": {"Mode": "Active"},
+        },
     )
-    assert "aws-otel-python" in json.dumps(lambda_resource["Properties"]["Layers"])
     template.has_resource_properties(
         "AWS::DynamoDB::Table",
         {
@@ -117,7 +111,7 @@ def test_production_defaults_to_lite_and_fails_closed_for_other_models() -> None
     policies = template.find_resources("AWS::IAM::Policy")
     bedrock_policies = [
         json.dumps(resource) for resource in policies.values()
-        if "bedrock:InvokeModel" in json.dumps(resource) and "SmsEchoFunctionServiceRole" in json.dumps(resource)
+        if "bedrock:InvokeModel" in json.dumps(resource) and "RustRuntimeFunctionServiceRole" in json.dumps(resource)
     ]
     assert len(bedrock_policies) == 2
     assert any("us.amazon.nova-micro-v1:0" in policy for policy in bedrock_policies)
@@ -192,45 +186,16 @@ def test_rust_candidate_is_opt_in_and_not_subscribed_to_inbound_sns() -> None:
     assert "RustCandidateFunction" not in candidate_text
 
 
-def test_python_capture_twin_is_opt_in_isolated_and_non_delivery() -> None:
+def test_python_capture_context_is_retired() -> None:
     app = cdk.App(context={"python_capture": "true"})
-    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
-
-    functions = template.find_resources("AWS::Lambda::Function")
-    python_functions = [
-        resource for resource in functions.values()
-        if resource["Properties"].get("Handler") == "backcountry_sms.handler.lambda_handler"
-    ]
-    assert len(python_functions) == 2
-    capture = next(
-        resource for resource in python_functions
-        if resource["Properties"]["Environment"]["Variables"]["DEPLOYMENT_ENVIRONMENT"] == "test"
-    )
-    capture_properties = capture["Properties"]
-    assert capture_properties["Runtime"] == "python3.12"
-    assert capture_properties["MemorySize"] == 128
-    assert capture_properties["Timeout"] == 25
-    assert capture_properties["Environment"]["Variables"]["TEST_MODE"] == "true"
-    assert capture_properties["Environment"]["Variables"]["SMS_DELIVERY_MODE"] == "capture"
-
-    subscriptions = json.dumps(template.find_resources("AWS::SNS::Subscription"))
-    assert "PythonCaptureFunction" not in subscriptions
-
-    policies = template.find_resources("AWS::IAM::Policy")
-    capture_policies = [
-        json.dumps(resource) for resource in policies.values()
-        if "PythonCaptureFunctionServiceRole" in json.dumps(resource)
-    ]
-    assert capture_policies
-    assert all("sms-voice:SendTextMessage" not in policy for policy in capture_policies)
-    assert all("sns:Publish" not in policy for policy in capture_policies)
+    with pytest.raises(ValueError, match="Python capture runtime was retired"):
+        BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest")
 
 
 def test_candidate_capture_targets_are_restricted_to_demo_stack() -> None:
-    for context_key in ("rust_candidate", "python_capture"):
-        app = cdk.App(context={context_key: True})
-        with pytest.raises(ValueError, match="restricted to BackcountrySmsEchoTest"):
-            BackcountrySmsAssistantStack(app, "BackcountrySmsEcho")
+    app = cdk.App(context={"rust_candidate": True})
+    with pytest.raises(ValueError, match="restricted to BackcountrySmsEchoTest"):
+        BackcountrySmsAssistantStack(app, "BackcountrySmsEcho")
 
 
 def test_rust_runtime_switches_primary_subscription_and_removes_python_request_lambda() -> None:
@@ -272,17 +237,10 @@ def test_rust_runtime_template_contains_no_python_request_lambda() -> None:
     assert all(resource["Properties"].get("Runtime") != "python3.12" for resource in functions.values())
 
 
-def test_explicit_python_runtime_context_is_a_rollback_only_path() -> None:
+def test_explicit_python_runtime_context_is_rejected_after_cutover() -> None:
     app = cdk.App(context={"rust_runtime": False})
-    template = Template.from_stack(BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest"))
-
-    functions = template.find_resources("AWS::Lambda::Function")
-    python_functions = [
-        resource for resource in functions.values()
-        if resource["Properties"].get("Handler") == "backcountry_sms.handler.lambda_handler"
-    ]
-    assert len(python_functions) == 1
-    assert all(resource["Properties"].get("Runtime") != "provided.al2023" for resource in functions.values())
+    with pytest.raises(ValueError, match="Python request runtime was retired"):
+        BackcountrySmsAssistantStack(app, "BackcountrySmsEchoTest")
 
 
 def test_dashboard_is_single_demo_dashboard_for_every_stack() -> None:

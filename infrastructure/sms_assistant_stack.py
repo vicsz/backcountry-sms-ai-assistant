@@ -47,21 +47,20 @@ class BackcountrySmsAssistantStack(Stack):
             return value is True or (isinstance(value, str) and value.lower() == "true")
 
         rust_candidate_enabled = context_flag("rust_candidate")
-        python_capture_enabled = context_flag("python_capture")
+        if context_flag("python_capture"):
+            raise ValueError("the Python capture runtime was retired; use the Rust candidate")
         rust_runtime_context = self.node.try_get_context("rust_runtime")
-        if rust_runtime_context is None:
-            # The only deployed target is the Demo stack, so make the accepted Rust
-            # runtime the safe default there. Candidate/capture contexts remain
-            # isolated unless the caller explicitly selects the primary runtime.
-            rust_runtime_enabled = is_test_stack and not (
-                rust_candidate_enabled or python_capture_enabled
-            )
-        else:
-            rust_runtime_enabled = context_flag("rust_runtime")
-        if (rust_candidate_enabled or python_capture_enabled or rust_runtime_enabled) and not is_test_stack:
-            raise ValueError("candidate capture and runtime targets are restricted to BackcountrySmsEchoTest")
-        if rust_candidate_enabled and rust_runtime_enabled:
+        if rust_runtime_context is False or (
+            isinstance(rust_runtime_context, str) and rust_runtime_context.lower() == "false"
+        ):
+            raise ValueError("the Python request runtime was retired; Rust is the only request runtime")
+        if rust_candidate_enabled and context_flag("rust_runtime"):
             raise ValueError("rust_candidate and rust_runtime cannot be enabled together")
+        # Rust is now the only request runtime. The candidate flag keeps an isolated
+        # direct-invocation Rust target available for future deployment checks.
+        rust_runtime_enabled = not rust_candidate_enabled
+        if rust_candidate_enabled and not is_test_stack:
+            raise ValueError("candidate targets are restricted to BackcountrySmsEchoTest")
         Tags.of(self).add("Project", "backcountry-sms-ai-assistant")
         Tags.of(self).add("Stage", "5-message-context")
         Tags.of(self).add("ManagedBy", "aws-cdk")
@@ -181,7 +180,9 @@ class BackcountrySmsAssistantStack(Stack):
             "InboundMessages",
             display_name="Backcountry inbound SMS",
         )
-        message_context = dynamodb.Table(
+        # Retain the historical table resource for safe cleanup in a separate infrastructure
+        # change; the deployed Rust runtime uses the RustCandidateMessageContext table.
+        _legacy_message_context = dynamodb.Table(
             self,
             "MessageContext",
             partition_key=dynamodb.Attribute(name="user_phone_e164", type=dynamodb.AttributeType.STRING),
@@ -195,18 +196,6 @@ class BackcountrySmsAssistantStack(Stack):
             rust_context = dynamodb.Table(
                 self,
                 "RustCandidateMessageContext",
-                partition_key=dynamodb.Attribute(name="user_phone_e164", type=dynamodb.AttributeType.STRING),
-                sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
-                billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
-                encryption=dynamodb.TableEncryption.AWS_MANAGED,
-                time_to_live_attribute="ttl",
-                removal_policy=RemovalPolicy.RETAIN,
-            )
-        python_capture_context = None
-        if python_capture_enabled:
-            python_capture_context = dynamodb.Table(
-                self,
-                "PythonCaptureMessageContext",
                 partition_key=dynamodb.Attribute(name="user_phone_e164", type=dynamodb.AttributeType.STRING),
                 sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
                 billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -333,113 +322,6 @@ class BackcountrySmsAssistantStack(Stack):
             ),
         )
         parks_data_source.node.add_dependency(corpus_deployment)
-        log_group = None
-        echo_function = None
-        if not rust_runtime_enabled:
-            log_group = logs.LogGroup(
-                self,
-                "SmsEchoFunctionLogGroup",
-                retention=logs.RetentionDays.TWO_WEEKS,
-                removal_policy=RemovalPolicy.RETAIN,
-            )
-            echo_function = lambda_.Function(
-                self,
-                "SmsEchoFunction",
-                runtime=lambda_.Runtime.PYTHON_3_12,
-                handler="backcountry_sms.handler.lambda_handler",
-                code=lambda_.Code.from_asset(
-                    ".",
-                    exclude=[
-                        ".git",
-                        ".venv",
-                        "cdk.out",
-                        ".mypy_cache",
-                        ".pytest_cache",
-                        ".ruff_cache",
-                        "rust/target",
-                        "rust/dist",
-                        "tests",
-                        "local",
-                    ],
-                ),
-                # Named requests add one bounded geospatial lookup before the Stage 3 weather path.
-                timeout=Duration.seconds(25),
-                memory_size=128,
-                tracing=lambda_.Tracing.ACTIVE,
-                adot_instrumentation=lambda_.AdotInstrumentationConfig(
-                    layer_version=lambda_.AdotLayerVersion.from_python_sdk_layer_version(
-                        lambda_.AdotLambdaLayerPythonSdkVersion.LATEST
-                    ),
-                    exec_wrapper=lambda_.AdotLambdaExecWrapper.INSTRUMENT_HANDLER,
-                ),
-                environment={
-                    "ALLOWED_PHONE_NUMBER": allowed_phone_number.value_as_string,
-                    "ORIGINATION_IDENTITY": origination_identity.value_as_string,
-                    "BEDROCK_MODEL_ID": bedrock_model_id.value_as_string,
-                    "MESSAGE_CONTEXT_TABLE": message_context.table_name,
-                    "DEPLOYMENT_ENVIRONMENT": deployment_environment.value_as_string,
-                    "TEST_MODE": test_mode.value_as_string,
-                    "SMS_DELIVERY_MODE": sms_delivery_mode.value_as_string,
-                    "RAG_KNOWLEDGE_BASE_ID": parks_knowledge_base.attr_knowledge_base_id,
-                },
-                log_group=log_group,
-            )
-        python_capture_function = None
-        if python_capture_enabled:
-            assert python_capture_context is not None
-            python_capture_log_group = logs.LogGroup(
-                self,
-                "PythonCaptureFunctionLogGroup",
-                retention=logs.RetentionDays.TWO_WEEKS,
-                removal_policy=RemovalPolicy.RETAIN,
-            )
-            python_capture_function = lambda_.Function(
-                self,
-                "PythonCaptureFunction",
-                runtime=lambda_.Runtime.PYTHON_3_12,
-                handler="backcountry_sms.handler.lambda_handler",
-                code=lambda_.Code.from_asset(
-                    ".",
-                    exclude=[
-                        ".git",
-                        ".venv",
-                        "cdk.out",
-                        ".mypy_cache",
-                        ".pytest_cache",
-                        ".ruff_cache",
-                        "rust/target",
-                        "rust/dist",
-                        "tests",
-                        "local",
-                    ],
-                ),
-                timeout=Duration.seconds(25),
-                memory_size=128,
-                tracing=lambda_.Tracing.ACTIVE,
-                adot_instrumentation=lambda_.AdotInstrumentationConfig(
-                    layer_version=lambda_.AdotLayerVersion.from_python_sdk_layer_version(
-                        lambda_.AdotLambdaLayerPythonSdkVersion.LATEST
-                    ),
-                    exec_wrapper=lambda_.AdotLambdaExecWrapper.INSTRUMENT_HANDLER,
-                ),
-                environment={
-                    "ALLOWED_PHONE_NUMBER": allowed_phone_number.value_as_string,
-                    "ORIGINATION_IDENTITY": origination_identity.value_as_string,
-                    "BEDROCK_MODEL_ID": bedrock_model_id.value_as_string,
-                    "MESSAGE_CONTEXT_TABLE": python_capture_context.table_name,
-                    "DEPLOYMENT_ENVIRONMENT": "test",
-                    "TEST_MODE": "true",
-                    "SMS_DELIVERY_MODE": "capture",
-                    "RAG_KNOWLEDGE_BASE_ID": parks_knowledge_base.attr_knowledge_base_id,
-                },
-                log_group=python_capture_log_group,
-            )
-            CfnOutput(
-                self,
-                "PythonCaptureFunctionName",
-                value=python_capture_function.function_name,
-                description="Direct-invocation Python capture twin; not subscribed to inbound SNS.",
-            )
         rust_function = None
         rust_log_group = None
         if rust_candidate_enabled or rust_runtime_enabled:
@@ -482,21 +364,12 @@ class BackcountrySmsAssistantStack(Stack):
                     else "Direct-invocation Rust candidate; not subscribed to inbound SNS."
                 ),
             )
-        request_function = rust_function if rust_runtime_enabled else echo_function
+        request_function = rust_function
         assert request_function is not None
-        request_log_group = rust_log_group if rust_runtime_enabled else log_group
+        request_log_group = rust_log_group
         assert request_log_group is not None
-        inbound_messages.add_subscription(subscriptions.LambdaSubscription(request_function))
-        if echo_function is not None:
-            echo_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["sms-voice:SendTextMessage"],
-                    resources=["*"],
-                )
-            )
-            echo_function.add_to_role_policy(
-                iam.PolicyStatement(actions=["bedrock:Retrieve"], resources=[parks_knowledge_base.attr_knowledge_base_arn])
-            )
+        if rust_runtime_enabled:
+            inbound_messages.add_subscription(subscriptions.LambdaSubscription(request_function))
 
         alert_topic = sns.Topic(self, "OperationalAlerts", display_name="Backcountry assistant alerts")
         has_alert_email = CfnCondition(self, "HasAlertEmail", expression=cdk.Fn.condition_not(cdk.Fn.condition_equals(alert_email.value_as_string, "")))
@@ -654,53 +527,7 @@ class BackcountrySmsAssistantStack(Stack):
                 ),
             ),
         )
-        if echo_function is not None:
-            echo_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["dynamodb:PutItem", "dynamodb:Query"],
-                    resources=[message_context.table_arn],
-                )
-            )
-            echo_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["geo-places:SearchText"],
-                    resources=["*"],
-                )
-            )
         runtime_roles = []
-        if echo_function is not None:
-            echo_role = echo_function.role
-            assert echo_role is not None
-            runtime_roles.append(echo_role)
-        if python_capture_function is not None:
-            assert python_capture_context is not None
-            python_capture_role = python_capture_function.role
-            assert python_capture_role is not None
-            runtime_roles.append(python_capture_role)
-            python_capture_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["bedrock:Retrieve"],
-                    resources=[parks_knowledge_base.attr_knowledge_base_arn],
-                )
-            )
-            python_capture_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["dynamodb:PutItem", "dynamodb:Query"],
-                    resources=[python_capture_context.table_arn],
-                )
-            )
-            python_capture_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["geo-places:SearchText"],
-                    resources=["*"],
-                )
-            )
-            python_capture_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
-                    resources=["*"],
-                )
-            )
         if rust_function is not None:
             assert rust_context is not None
             rust_role = rust_function.role
@@ -770,13 +597,6 @@ class BackcountrySmsAssistantStack(Stack):
             )],
         )
         cast(iam.CfnPolicy, micro_model_policy.node.default_child).cfn_options.condition = is_nova_micro
-        if echo_function is not None:
-            echo_function.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
-                    resources=["*"],
-                )
-            )
         CfnOutput(
             self,
             "InboundSmsTopicArn",

@@ -97,15 +97,9 @@ jobs:
       - name: Unit tests
         if: steps.changes.outputs.docs_only != 'true'
         run: pytest -m 'not legacy_python_runtime'
-      - name: Legacy Python oracle tests
-        if: steps.changes.outputs.docs_only != 'true'
-        run: pytest -m legacy_python_runtime
       - name: Offline evaluation gates
         if: steps.changes.outputs.docs_only != 'true'
         run: pytest -m 'eval_model or eval_location' --eval-mode=offline --eval-report-dir=local/evaluations/ci
       - name: CDK synth
         if: steps.changes.outputs.docs_only != 'true'
         run: npx --yes aws-cdk@2 synth --quiet
-      - name: CDK Python rollback synth
-        if: steps.changes.outputs.docs_only != 'true'
-        run: npx --yes aws-cdk@2 synth --context rust_runtime=false --quiet

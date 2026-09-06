@@ -1,8 +1,9 @@
 # Stage 11 — Rust application runtime migration
 
 **Status:** Accepted for the Demo request path. Rust is the only deployed request Lambda and the
-Python runtime has been removed from the deployed stack. The Python CDK and support modules remain
-for infrastructure/tests; fire-ban ingestion and a real SMS smoke test remain explicitly deferred.
+Python runtime has been removed from the deployed stack and CDK request/capture wiring. The Python
+CDK, evaluation, ingestion, and offline-support modules remain; fire-ban ingestion and a real SMS
+smoke test remain explicitly deferred.
 
 ## Objective
 
@@ -78,7 +79,8 @@ behavior is not presented as live status.
 The Python runtime was used as the pre-cutover oracle through an isolated capture twin. The matched
 comparison, Rust application-span verification, rollback drill, and Demo cutover are recorded
 below. The deployed request path is now Rust; `backcountry_sms/` remains only as retained Python
-support/evaluation code for safe rollback development and CDK imports, not as a deployed Lambda.
+support/evaluation code and is not a deployed Lambda. The former rollback/capture CDK switches were
+retired under ENH-0007 after the Rust-only cutover and observation evidence.
 
 ## Controlled Demo canary record — 2026-09-05 (historical pre-cutover)
 
@@ -360,9 +362,10 @@ After parity, capture, measurement, review, and all applicable live checks pass:
    bounded response, preserve the expected logical call path, and produce no Rust-specific runtime
    evidence. Record the rollback result and failure category.
 
-Only after successful cutover and rollback verification may the Python deployed runtime source
-be removed from the deployment package and repository. The Python CDK and any explicitly retained
-black-box evaluation helpers remain outside that deletion.
+After successful cutover and rollback verification, the Python deployed runtime and capture wiring
+may be removed from CDK and CI. Python CDK and explicitly retained black-box evaluation/support
+helpers remain outside that deletion; deleting their shared modules requires a separate dependency
+review.
 
 ## Acceptance criteria
 
@@ -383,8 +386,8 @@ black-box evaluation helpers remain outside that deletion.
 8. The normal target is replaced only after the explicit live gates pass, with a known-good Python
    rollback artifact retained until cutover is accepted.
 9. After acceptance, the deployed request path contains no Python runtime implementation, and the
-   complete `backcountry_sms/` runtime source boundary has been removed or explicitly classified as
-   non-production support code.
+   retained `backcountry_sms/` source is explicitly classified as non-production support code where
+   it remains for evaluation or offline tooling.
 10. `STATUS.md` and `docs/performance.md` state the actual deployment, evidence, comparison, and
     remaining limitations.
 

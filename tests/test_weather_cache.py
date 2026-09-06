@@ -2,11 +2,7 @@
 
 from typing import Self
 
-import pytest
-
 from backcountry_sms import weather
-
-pytestmark = pytest.mark.legacy_python_runtime
 
 
 def _payload() -> dict[str, object]:

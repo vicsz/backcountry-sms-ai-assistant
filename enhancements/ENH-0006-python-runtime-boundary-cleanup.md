@@ -2,31 +2,33 @@
 
 ## Status
 
-Complete for the current cutover boundary; source retirement remains intentionally deferred.
+Complete for the original cutover boundary. The rollback/oracle wiring described here was
+subsequently retired by ENH-0007; this record remains the historical decision that established the
+Rust-only deployed target.
 
 ## Decision
 
 Rust owns the deployed request path. Python remains only where it is still needed for CDK,
-deployment helpers, fire-ban/RAG offline tooling, and the explicitly labelled rollback/oracle
-surface. The Python Lambda is not part of the default Demo stack and is not subscribed to inbound
-SNS.
+fire-ban/RAG offline tooling, evaluation, and support. The Python Lambda and capture twin are no
+longer represented in CDK or subscribed to inbound SNS.
 
 ## Cleanup completed
 
 - Test ownership is documented in [`docs/testing.md`](../docs/testing.md).
-- The default CDK path and CI gates are Rust-first; the Python runtime path is an explicit rollback
-  shape only.
+- The default CDK path and CI gates are Rust-first; the former Python rollback/capture contexts now
+  fail closed.
 - RAG and fire-ban support modules are kept because their local/offline capabilities are still
-  active and because the rollback path has not yet been retired.
+  active and their dependencies have not been separately retired.
 
 ## Remaining safe cleanup
 
-After a further observed Rust-only window and an explicit decision to remove rollback, delete the
-Python request-runtime implementation and its oracle tests in a separate change. Do not remove it
-as part of a documentation or support-tool change, and do not remove Python CDK/support code.
+Review retained Python request helpers and historical oracle tests separately before deleting them;
+selected evaluation/support tests still import shared helpers. Do not remove Python CDK, ingestion,
+or evaluation code as part of this cleanup.
 
 ## Acceptance
 
 - Default Demo synthesis contains Rust only for the request Lambda.
-- Explicit Python rollback synthesis remains testable.
-- Rust runtime contracts and the retained Python oracle are visibly separated in CI.
+- Explicit Python rollback synthesis is no longer supported.
+- Rust runtime contracts own deployed behavior; historical Python oracle tests remain visibly
+  marked but are not run by CI.

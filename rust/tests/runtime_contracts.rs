@@ -589,6 +589,103 @@ fn duplicate_and_malformed_paths_stop_before_second_side_effect() {
 }
 
 #[test]
+fn adapter_failures_use_bounded_fallbacks_and_preserve_call_boundaries() {
+    let log = CallLog::default();
+    let mut weather_services = capture_services(
+        &log,
+        vec![
+            Ok(interpretation(
+                "weather",
+                None,
+                Some((45.64, -78.62)),
+                "current",
+            )),
+            Ok("Weather is temporarily unavailable.".into()),
+        ],
+        Err(backcountry_runtime::adapters::AdapterError::new(
+            "read_failed",
+        )),
+        Ok(true),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new(
+            "weather_down",
+        )),
+        Ok(vec![]),
+        Ok(backcountry_runtime::domain::unknown_fire_result("not_used")),
+    );
+    let result = handle_event(
+        &sns_event("+14165551234", "Weather at 45.64,-78.62"),
+        &capture_config(),
+        Some("+14165551234"),
+        &mut weather_services,
+    );
+    assert_eq!(result.status, "captured");
+    assert_eq!(
+        result.response.as_deref(),
+        Some("Weather is temporarily unavailable.")
+    );
+    assert_eq!(result.call_counts.get("interpretation"), Some(&1));
+    assert_eq!(result.call_counts.get("weather"), Some(&1));
+    assert_eq!(result.call_counts.get("weather_unavailable"), Some(&1));
+    assert_eq!(result.call_counts.get("location"), None);
+    assert!(!result.sms_api_called && !result.sns_published);
+
+    let malformed_log = CallLog::default();
+    let mut malformed_services = base_services(
+        &malformed_log,
+        vec![Err(backcountry_runtime::adapters::AdapterError::new(
+            "model_down",
+        ))],
+    );
+    let malformed_result = handle_event(
+        &sns_event("+14165551234", "weather"),
+        &capture_config(),
+        Some("+14165551234"),
+        &mut malformed_services,
+    );
+    assert_eq!(
+        malformed_result.response.as_deref(),
+        Some(backcountry_runtime::domain::WEATHER_EXTRACTION_FALLBACK)
+    );
+    assert_eq!(malformed_result.call_counts.get("interpretation"), Some(&1));
+    assert_eq!(malformed_result.call_counts.get("general"), None);
+    assert!(!malformed_result.sms_api_called);
+}
+
+#[test]
+fn retrieval_failure_stops_before_rag_model_call() {
+    let log = CallLog::default();
+    let mut services = capture_services(
+        &log,
+        vec![Ok(interpretation("information_lookup", None, None, "none"))],
+        Ok(ContextLoad {
+            history: vec![],
+            readable: true,
+        }),
+        Ok(true),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new(
+            "retrieval_down",
+        )),
+        Ok(backcountry_runtime::domain::unknown_fire_result("not_used")),
+    );
+    let result = handle_event(
+        &sns_event("+14165551234", "What facilities are listed?"),
+        &capture_config(),
+        Some("+14165551234"),
+        &mut services,
+    );
+    assert_eq!(
+        result.response.as_deref(),
+        Some(backcountry_runtime::domain::RAG_RETRIEVAL_FAILURE)
+    );
+    assert_eq!(result.call_counts.get("retrieval"), Some(&1));
+    assert_eq!(result.call_counts.get("rag_response"), None);
+    assert!(!result.sms_api_called);
+}
+
+#[test]
 fn fire_snapshot_wkt_holes_multipolygons_and_freshness_fail_closed() {
     let donut = "POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0), (2 2, 8 2, 8 8, 2 8, 2 2))";
     assert_eq!(

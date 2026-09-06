@@ -10,4 +10,5 @@ ideas that are not yet scoped remain in [`docs/ideas.md`](../docs/ideas.md).
 | ENH-0003 | Rust default, test ownership, and documentation cleanup | Closed | Rust default/rollback stack tests; Rust package/CI gates; RAG and deployment-boundary wording | Current commit |
 | ENH-0004 | RAG quality gates and park-scoped retrieval | Partially implemented | Python/Rust park scoping and time-sensitive routing; offline retrieval evaluator | Current worktree |
 | ENH-0005 | Fire-ban ingestion normalization and local promotion primitive | Partially implemented | Provenance, deterministic snapshot, validation failure, atomic pointer tests | Current worktree |
-| ENH-0006 | Python runtime boundary cleanup | Closed for current cutover boundary | Rust-only default synth; explicit Python rollback; ownership documentation | Current worktree |
+| ENH-0006 | Python runtime boundary cleanup | Closed; rollback/oracle boundary superseded by ENH-0007 | Rust-only deployed target; ownership documentation | Current worktree |
+| ENH-0007 | Rust runtime test parity and Python oracle retirement | Implemented locally; final validation pending | Rust failure-path contracts; no Python request/capture Lambda; no Python oracle CI gate | Current worktree |

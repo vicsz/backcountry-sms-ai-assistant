@@ -12,14 +12,16 @@ synthesis, retains a short encrypted context window, returns one concise SMS, an
 observability, safe fallbacks, and explicit testing boundaries.
 
 Stage 11 is deployed to the Demo request path with Rust as the only Lambda runtime. Python remains
-for CDK/support, rollback, and evaluation code. Fire-ban live ingestion remains deferred; the
+for CDK, evaluation, ingestion, and offline support; its request/capture Lambda wiring and CI oracle
+gate are retired. Fire-ban live ingestion remains deferred; the
 current work adds only a local normalization/promotion primitive. RAG park scoping and
 time-sensitive routing are implemented locally and are promoted only through the normal runtime
 validation gate.
 
 Current tracked behavior work: `BUG-0001`, `BUG-0002`, and `ENH-0001` are closed and verified on the
 dedicated demo capture stack; `ENH-0003` covers Rust-default hardening and test/documentation
-cleanup. This is the project's only deployed environment.
+cleanup; `ENH-0007` retires Python request/capture wiring and the CI oracle gate after Rust parity
+coverage. This is the project's only deployed environment.
 
 ## Done — deployed and verified
 
@@ -80,7 +82,7 @@ cleanup. This is the project's only deployed environment.
 1. Keep fire-ban live ingestion deferred; do not present local snapshots or normalized artifacts as live.
 2. Keep RAG freshness/source-date handling, corpus refresh, and recurring ingestion deferred until
    the metadata and live retrieval gates are separately authorized.
-3. Retire the Python rollback/oracle surface only after another observed Rust-only window and an
-   explicit rollback-removal decision; retain Python CDK/support code.
+3. Keep the retained Python support/reference modules classified and avoid deleting shared helpers
+   until evaluation and ingestion dependencies are separately reviewed.
 4. Run the public GitHub cleanup checklist before creating a sanitized public copy or fresh initial
    commit.
