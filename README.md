@@ -31,7 +31,7 @@ and [Messages via satellite documentation](https://support.apple.com/en-euro/gui
 
 ## Architecture
 
-![Backcountry SMS AI Assistant AWS architecture](docs/aws-architecture.svg)
+![Backcountry SMS AI Assistant AWS architecture](aws-architecture.png)
 
 The deployed core is a two-way SMS flow: satellite-enabled iPhone Messages reach AWS End User
 Messaging SMS, which publishes an inbound notification to Amazon SNS and invokes the Rust Lambda
