@@ -4,6 +4,7 @@
 //! modules remain support/evaluation code; the deployed Demo request path is Rust.
 
 pub mod adapters;
+pub mod build_info;
 pub mod domain;
 pub mod event;
 pub mod fakes;

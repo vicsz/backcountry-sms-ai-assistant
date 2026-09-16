@@ -128,6 +128,18 @@ pub fn handle_event(
         return RuntimeResponse::ignored("sender_not_allowed");
     }
 
+    if let Some(response) = crate::build_info::reply(&message.message_body) {
+        emit(
+            services,
+            "route",
+            "success",
+            Some("build_status"),
+            None,
+            None,
+        );
+        return finish_without_context(config, &message, &response, services);
+    }
+
     // Keep the DynamoDB partition key aligned with the Python oracle: provider formatting is
     // normalized before context reads/writes, while the original destination value is retained
     // for an outbound provider call.
@@ -721,6 +733,49 @@ fn finish(
         delivery_mode: Some(config.delivery_mode.clone()),
         response: Some(response),
         location_source: location_source.map(str::to_owned),
+        call_counts: counts,
+        sms_api_called: !config.is_capture(),
+        sns_published: false,
+    }
+}
+
+fn finish_without_context(
+    config: &DeliveryConfig,
+    message: &crate::event::InboundMessage,
+    response: &str,
+    services: &mut Services,
+) -> RuntimeResponse {
+    let response = domain::bound_sms(response, domain::FALLBACK_REPLY);
+    if !config.is_capture() {
+        adapter_call(services, "sms", "end_user_messaging");
+        if services
+            .sms
+            .send(&message.origination_number, &response)
+            .is_err()
+        {
+            emit(
+                services,
+                "sms_send_failed",
+                "failure",
+                Some("sms_send_failed"),
+                Some("end_user_messaging"),
+                None,
+            );
+            return failed(config, "sms_send_failed", Some(&response), None, services);
+        }
+    }
+    emit(services, "sms_replied", "success", None, None, None);
+    let counts = services.telemetry.snapshot();
+    RuntimeResponse {
+        status: if config.is_capture() {
+            "captured".into()
+        } else {
+            "replied".into()
+        },
+        reason: None,
+        delivery_mode: Some(config.delivery_mode.clone()),
+        response: Some(response),
+        location_source: None,
         call_counts: counts,
         sms_api_called: !config.is_capture(),
         sns_published: false,

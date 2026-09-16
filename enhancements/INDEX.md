@@ -18,3 +18,4 @@ ideas that are not yet scoped remain in [`docs/ideas.md`](../docs/ideas.md).
 | ENH-0011 | Remove dead Python request-runtime code | Implemented; Rust remains deployed runtime | No Python entrypoint/context store; retained support imports; Python/Rust validation gates | `fc02fdc`, `f61a74e` |
 | ENH-0012 | Reconcile post-cutover documentation | Implemented; documentation-only | No stale active references to deleted Python request-runtime tests; status metadata reconciled | `6da39f0` |
 | ENH-0013 | RAG corpus and tuning evidence pack | Implemented locally; Bedrock promotion deferred | Section-first records, local BGE/hybrid demo, expanded golden cases, redacted tuning report | `7125ede` |
+| ENH-0014 | Deterministic build status over SMS | Implemented locally; Demo verification pending | Build/status command, embedded commit/time, no-adapter early path, deployed capture check | Current change |

@@ -172,6 +172,60 @@ fn gsm7_replacement_and_extended_character_cost_stay_within_one_segment() {
     assert!(!bounded.is_empty());
 }
 
+#[test]
+fn enh_0014_build_status_contract_is_exact_and_bounded() {
+    assert!(backcountry_runtime::build_info::is_command("BUILD"));
+    assert!(backcountry_runtime::build_info::is_command("status?"));
+    assert!(backcountry_runtime::build_info::is_command(
+        " build status! "
+    ));
+    assert!(!backcountry_runtime::build_info::is_command(
+        "what is the build status?"
+    ));
+    assert!(!backcountry_runtime::build_info::is_command("build number"));
+
+    let response =
+        backcountry_runtime::build_info::reply_for_metadata("4cd1e9c", "2026-09-15T14:32:00Z");
+    assert_eq!(response, "Build 4cd1e9c 2026-09-15T14:32:00Z");
+    assert!(septet_count(&response) <= 160);
+    assert_eq!(
+        backcountry_runtime::build_info::reply_for_metadata("unknown", "unknown"),
+        "Build metadata unavailable."
+    );
+}
+
+#[test]
+fn enh_0014_build_status_bypasses_context_model_and_provider_adapters() {
+    let log = CallLog::default();
+    let mut services = capture_services(
+        &log,
+        vec![],
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+        Err(backcountry_runtime::adapters::AdapterError::new("not_used")),
+    );
+
+    let result = handle_event(
+        &sns_event("+14165551234", "status"),
+        &capture_config(),
+        Some("+14165551234"),
+        &mut services,
+    );
+
+    assert_eq!(result.status, "captured");
+    assert_eq!(
+        result.response,
+        backcountry_runtime::build_info::reply("status")
+    );
+    assert!(result.call_counts.is_empty());
+    assert!(log.operations().is_empty());
+    assert!(!result.sms_api_called);
+    assert!(!result.sns_published);
+}
+
 fn interpretation(
     intent: &str,
     location: Option<&str>,

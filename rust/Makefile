@@ -1,6 +1,8 @@
 TARGET ?= x86_64-unknown-linux-gnu
 PROFILE ?= release
 BUILD_CMD ?= cargo build
+BUILD_COMMIT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
+BUILD_TIME_UTC ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 ARTIFACT := target/$(TARGET)/$(PROFILE)/bootstrap
 PACKAGE_DIR := dist
 ARCHIVE_DIR := target/package
@@ -21,7 +23,7 @@ clippy:
 	cargo clippy --locked --all-targets --all-features -- -D warnings
 
 build:
-	$(BUILD_CMD) --locked --release --target $(TARGET)
+	BUILD_COMMIT="$(BUILD_COMMIT)" BUILD_TIME_UTC="$(BUILD_TIME_UTC)" $(BUILD_CMD) --locked --release --target $(TARGET)
 
 package: build
 	install -d $(PACKAGE_DIR)

@@ -16,6 +16,7 @@ adapters implement:
 - Bedrock Converse, Bedrock Knowledge Base retrieval, DynamoDB, Amazon Location Places, Open-Meteo,
   and AWS End User Messaging SMS adapters;
 - redacted low-cardinality JSON/CloudWatch EMF telemetry.
+- deterministic `build`/`status` replies containing the embedded short Git commit and UTC build time.
 
 The local capture harness injects deterministic fakes and records logical calls. It does not call
 Bedrock, HTTP providers, DynamoDB, retrieval, Athena, SNS, or SMS. The deployed Demo request path
@@ -33,6 +34,11 @@ make test
 make clippy
 make package
 ```
+
+`build` and `status` are exact deterministic commands handled before context, model, retrieval, or
+provider calls. `make package` embeds the current short Git commit and UTC build time; direct test
+builds without those values return `Build metadata unavailable.`. A self-incrementing build number
+is intentionally not part of the current contract.
 
 The Lambda package target is `x86_64-unknown-linux-gnu`, matching the existing CDK default
 architecture. `rust-toolchain.toml` pins the compiler and target. `make package` creates the
